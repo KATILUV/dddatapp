@@ -349,6 +349,68 @@ app.post('/api/generate-insight', async (req, res) => {
   }
 });
 
+// Chat API endpoint for conversational interface
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { messages, options = {} } = req.body;
+    
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Messages array is required' });
+    }
+    
+    // Check if OpenAI API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'OpenAI API key is missing' });
+    }
+    
+    // Set up request parameters
+    const requestParams = {
+      model: 'gpt-4o', // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages,
+      temperature: options.temperature || 0.7,
+      max_tokens: options.max_tokens || 800
+    };
+    
+    if (options.responseFormat) {
+      requestParams.response_format = options.responseFormat;
+    }
+    
+    // Call OpenAI API
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      requestParams,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        }
+      }
+    );
+    
+    // Extract the response content
+    const assistantResponse = response.data.choices[0].message.content;
+    
+    // Log the conversation for debugging/analytics
+    if (messages.length >= 2) {
+      const userMessage = messages[messages.length - 1].content;
+      console.log(`Chat: User asked "${userMessage.substring(0, 50)}..." and received response.`);
+    }
+    
+    // Return the result
+    res.json({
+      response: assistantResponse,
+      model: response.data.model,
+      usage: response.data.usage
+    });
+  } catch (error) {
+    console.error('Error in chat endpoint:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'Failed to get chat response', 
+      details: error.response?.data?.error?.message || error.message 
+    });
+  }
+});
+
 // Multi-source insight generation
 app.post('/api/multi-source-insight', async (req, res) => {
   try {
