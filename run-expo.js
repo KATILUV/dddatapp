@@ -119,6 +119,19 @@ app.get('/', (req, res) => {
         color: #FF0080;
         font-weight: 500;
       }
+      .url-box {
+        background: rgba(255,255,255,0.1);
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        word-break: break-all;
+      }
+      .manual-option {
+        margin-top: 40px;
+        padding: 20px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 16px;
+      }
     </style>
   </head>
   <body>
@@ -130,30 +143,38 @@ app.get('/', (req, res) => {
         <h2>To view the app on your device:</h2>
         <ol>
           <li>Open <span class="highlight">Expo Go</span> on your device</li>
-          <li>Tap <span class="highlight">"Scan QR Code"</span> in the app</li>
-          <li>Scan the QR code below</li>
-          <li>Wait for the app to download and start</li>
+          <li>Tap <span class="highlight">"Enter URL manually"</span> in the app</li>
+          <li>Enter the URL below</li>
+          <li>Alternately, set up a development build by scanning the QR code when available</li>
         </ol>
       </div>
       
       <div class="status">
-        Starting Expo server... <br>
-        This may take a minute while the JavaScript bundles are prepared.
+        ${expoStatus} <br>
+        ${expoUrlLastUpdated ? `Last updated: ${new Date(expoUrlLastUpdated).toLocaleTimeString()}` : ''}
       </div>
       
-      <div class="note">
-        Note: The QR code will appear here automatically when the Expo server is ready.<br>
-        Please wait a moment while it loads...
-      </div>
+      ${expoUrl ? `
+        <div class="manual-option">
+          <h3>Enter this URL in Expo Go:</h3>
+          <div class="url-box">${expoUrl}</div>
+          <p>Copy this URL and enter it manually in the Expo Go app.</p>
+        </div>
+      ` : `
+        <div class="note">
+          Waiting for Expo to generate the URL...<br>
+          This may take a minute while the JavaScript bundles are prepared.
+        </div>
+      `}
       
       <a href="https://expo.dev/client" class="expo-link" target="_blank">Don't have Expo Go? Get it here</a>
     </div>
     
     <script>
-      // Simple script to refresh the page every 10 seconds to check for the QR code
+      // Refresh the page every 10 seconds to check for updates
       setTimeout(() => {
         window.location.reload();
-      }, 10000);
+      }, 5000);
     </script>
   </body>
   </html>
@@ -168,26 +189,66 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Expo helper server running on port ${PORT}`);
   console.log(`Visit http://localhost:${PORT} to view the QR code when it's ready`);
   
-  // Start Expo in the background
-  console.log('Starting Expo with tunneling enabled...');
-  const expoProcess = exec('npx expo start --tunnel --non-interactive', (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Expo error: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      console.error(`Expo stderr: ${stderr}`);
-      return;
-    }
-    console.log(`Expo stdout: ${stdout}`);
+  // Create a route to get current status via API
+  app.get('/api/status', (req, res) => {
+    res.json({
+      expoUrl,
+      expoStatus,
+      lastUpdated: expoUrlLastUpdated
+    });
   });
+  
+  // Start Expo in the background using spawn to better capture output
+  console.log('Starting Expo with tunneling enabled...');
+  expoStatus = 'Starting Expo server...';
+  
+  // Set environment variable for non-interactive mode
+  const env = {
+    ...process.env,
+    CI: '1',
+    EXPO_NO_TYPESCRIPT_SETUP: 'true',
+    EXPO_TUNNEL_AUTOINSTALL: 'true'
+  };
+  
+  const expoProcess = spawn('npx', ['expo', 'start', '--tunnel'], { env });
   
   // Capture the output to look for the QR code or URL
   expoProcess.stdout.on('data', (data) => {
-    console.log(`Expo: ${data}`);
+    const output = data.toString();
+    console.log(`Expo: ${output}`);
+    
+    // Look for tunnel URL in the output
+    const tunnelUrlMatch = output.match(/https:\/\/[a-z0-9-]+\.expo\.dev/i);
+    if (tunnelUrlMatch) {
+      expoUrl = tunnelUrlMatch[0];
+      expoUrlLastUpdated = Date.now();
+      expoStatus = 'Expo tunnel ready!';
+      console.log(`Found Expo tunnel URL: ${expoUrl}`);
+    }
+    
+    // Update status based on output indicators
+    if (output.includes('Starting Metro Bundler')) {
+      expoStatus = 'Metro Bundler starting...';
+    } else if (output.includes('Tunnel connected')) {
+      expoStatus = 'Tunnel connected, preparing app...';
+    } else if (output.includes('Tunnel ready')) {
+      expoStatus = 'Tunnel ready! Waiting for JS bundle...';
+    }
   });
   
   expoProcess.stderr.on('data', (data) => {
-    console.error(`Expo error: ${data}`);
+    const errorOutput = data.toString();
+    console.error(`Expo error: ${errorOutput}`);
+    
+    if (errorOutput.includes('--non-interactive is not supported')) {
+      // That's fine, we're handling it with CI=1
+    } else {
+      expoStatus = `Error: ${errorOutput.slice(0, 100)}...`;
+    }
+  });
+  
+  expoProcess.on('close', (code) => {
+    console.log(`Expo process exited with code ${code}`);
+    expoStatus = `Expo process exited with code ${code}. Please restart.`;
   });
 });
