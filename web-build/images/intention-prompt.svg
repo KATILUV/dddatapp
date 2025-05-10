@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="300" height="600" viewBox="0 0 300 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="600" rx="20" fill="url(#backgroundGradient)" />
+  
+  <!-- Orb -->
+  <circle cx="150" cy="90" r="50" fill="url(#orbGradient)" opacity="0.8" />
+  <circle cx="150" cy="90" r="35" fill="url(#orbGradient)" opacity="0.6" />
+  <circle cx="150" cy="90" r="20" fill="url(#orbGradient)" />
+  <circle cx="140" cy="80" r="8" fill="white" opacity="0.3" />
+  
+  <!-- Title -->
+  <text x="150" y="170" font-family="Arial" font-size="22" font-weight="bold" fill="#F8E9B4" text-anchor="middle">What's your intention?</text>
+  
+  <!-- Subtitle -->
+  <text x="150" y="195" font-family="Arial" font-size="12" fill="#EFD9D1" text-anchor="middle">Voa works best when it understands what</text>
+  <text x="150" y="210" font-family="Arial" font-size="12" fill="#EFD9D1" text-anchor="middle">you hope to achieve. What do you want to</text>
+  <text x="150" y="225" font-family="Arial" font-size="12" fill="#EFD9D1" text-anchor="middle">learn about yourself?</text>
+  
+  <!-- Card -->
+  <rect x="30" y="245" width="240" height="140" rx="15" fill="rgba(100, 100, 255, 0.1)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <!-- Input Textarea -->
+  <rect x="45" y="260" width="210" height="100" rx="8" fill="rgba(255, 255, 255, 0.03)" stroke="#8F7BEE" stroke-width="1" />
+  <text x="55" y="280" font-family="Arial" font-size="12" fill="#EFD9D1">Find balance in my digital life</text>
+  
+  <!-- Character count -->
+  <text x="235" y="370" font-family="Arial" font-size="10" fill="#9090A0" text-anchor="end">26 characters</text>
+  
+  <!-- Suggestions title -->
+  <text x="45" y="405" font-family="Arial" font-size="12" fill="#9090A0">Or try one of these:</text>
+  
+  <!-- Suggestion buttons -->
+  <rect x="35" y="415" width="230" height="30" rx="15" fill="transparent" stroke="#A894FF" stroke-width="1" />
+  <text x="150" y="435" font-family="Arial" font-size="11" fill="#A894FF" text-anchor="middle">Understand my online behavior patterns</text>
+  
+  <rect x="35" y="455" width="230" height="30" rx="15" fill="transparent" stroke="#A894FF" stroke-width="1" />
+  <text x="150" y="475" font-family="Arial" font-size="11" fill="#A894FF" text-anchor="middle">Get insights about my digital well-being</text>
+
+  <rect x="35" y="495" width="230" height="30" rx="15" fill="transparent" stroke="#A894FF" stroke-width="1" />
+  <text x="150" y="515" font-family="Arial" font-size="11" fill="#A894FF" text-anchor="middle">Discover connections in my data</text>
+  
+  <!-- Button -->
+  <rect x="75" y="540" width="150" height="40" rx="20" fill="url(#buttonGradient)" />
+  <text x="135" y="565" font-family="Arial" font-size="14" font-weight="bold" fill="#0B0B23" text-anchor="middle">Start your journey</text>
+  <circle cx="202" cy="560" r="10" fill="#0B0B23" />
+  <polyline points="198,560 202,564 206,560" stroke="white" stroke-width="2" fill="none" />
+
+  <!-- Progress Dots -->
+  <circle cx="130" cy="590" r="5" fill="#8F7BEE" opacity="0.6" />
+  <circle cx="150" cy="590" r="5" fill="#8F7BEE" opacity="0.6" />
+  <circle cx="170" cy="590" r="7" fill="transparent" stroke="#A894FF" stroke-width="2" />
+  <circle cx="170" cy="590" r="3" fill="#A894FF" />
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="backgroundGradient" x1="0" y1="0" x2="0" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B0B23" />
+      <stop offset="1" stop-color="#151540" />
+    </linearGradient>
+    <linearGradient id="orbGradient" x1="100" y1="40" x2="200" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A894FF" />
+      <stop offset="1" stop-color="#8F7BEE" />
+    </linearGradient>
+    <linearGradient id="buttonGradient" x1="75" y1="540" x2="225" y2="580" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A894FF" />
+      <stop offset="1" stop-color="#8F7BEE" />
+    </linearGradient>
+  </defs>
+</svg>
