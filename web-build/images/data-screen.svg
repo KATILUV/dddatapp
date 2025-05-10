@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="300" height="600" viewBox="0 0 300 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="600" rx="20" fill="url(#backgroundGradient)" />
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="300" height="60" fill="rgba(11, 11, 35, 0.5)" />
+  <text x="150" y="35" font-family="Arial" font-size="16" font-weight="bold" letter-spacing="1.5" fill="#F8E9B4" text-anchor="middle">DATA SOURCES</text>
+  
+  <!-- Intro Card -->
+  <rect x="15" y="70" width="270" height="100" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  <text x="30" y="95" font-family="Arial" font-size="16" font-weight="bold" fill="#F8E9B4">Connect Your Data</text>
+  <text x="30" y="115" font-family="Arial" font-size="11" fill="#D2D2EF">
+    <tspan x="30" dy="0">Upload your personal data exports for Voa</tspan>
+    <tspan x="30" dy="14">to analyze and generate insights. All data</tspan>
+    <tspan x="30" dy="14">remains on your device.</tspan>
+  </text>
+  
+  <!-- Privacy Badge -->
+  <rect x="30" y="145" width="115" height="20" rx="10" fill="rgba(46, 196, 182, 0.1)" />
+  <text x="45" y="158" font-family="Arial" font-size="10" fill="#2EC4B6">✓ Private &amp; Secure</text>
+  
+  <!-- Available Sources Section -->
+  <text x="20" y="190" font-family="Arial" font-size="10" letter-spacing="1.5" fill="#D2D2EF">AVAILABLE SOURCES</text>
+  
+  <!-- Source Card 1: Social Media -->
+  <rect x="15" y="200" width="270" height="120" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  <circle cx="35" cy="225" r="15" fill="rgba(168, 148, 255, 0.1)" />
+  <text x="35" y="229" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">👥</text>
+  <text x="60" y="220" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Social Media</text>
+  <text x="60" y="235" font-family="Arial" font-size="10" fill="#D2D2EF">
+    Import data from Instagram, Twitter, or
+    Facebook exports
+  </text>
+  
+  <line x1="15" y1="250" x2="285" y2="250" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <text x="30" y="265" font-family="Arial" font-size="9" fill="#D2D2EF">Supports: json, csv, zip</text>
+  <rect x="215" y="255" width="60" height="20" rx="10" stroke="#A894FF" stroke-width="1" fill="transparent" />
+  <text x="245" y="268" font-family="Arial" font-size="10" fill="#A894FF" text-anchor="middle">Upload</text>
+  
+  <!-- Connected Source Item -->
+  <line x1="15" y1="280" x2="285" y2="280" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  <text x="35" y="300" font-family="Arial" font-size="10" fill="#D2D2EF">📄</text>
+  <text x="50" y="295" font-family="Arial" font-size="10" fill="#F8E9B4">instagram_data_export.zip</text>
+  <text x="50" y="310" font-family="Arial" font-size="9" fill="#D2D2EF">2.4 MB • May 10, 2023</text>
+  <circle cx="270" cy="300" r="10" fill="rgba(255, 255, 255, 0.05)" />
+  <text x="270" y="303" font-family="Arial" font-size="12" fill="#D2D2EF" text-anchor="middle">×</text>
+  
+  <!-- Source Card 2: Notes & Journals (collapsed) -->
+  <rect x="15" y="335" width="270" height="80" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  <circle cx="35" cy="360" r="15" fill="rgba(168, 148, 255, 0.1)" />
+  <text x="35" y="364" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">📝</text>
+  <text x="60" y="355" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Notes &amp; Journals</text>
+  <text x="60" y="370" font-family="Arial" font-size="10" fill="#D2D2EF">
+    Upload exported notes from Apple Notes,
+    Google Keep, or text files
+  </text>
+  
+  <line x1="15" y1="385" x2="285" y2="385" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <text x="30" y="400" font-family="Arial" font-size="9" fill="#D2D2EF">Supports: txt, json, md, csv</text>
+  <rect x="215" y="390" width="60" height="20" rx="10" stroke="#A894FF" stroke-width="1" fill="transparent" />
+  <text x="245" y="403" font-family="Arial" font-size="10" fill="#A894FF" text-anchor="middle">Upload</text>
+
+  <!-- Source Card 3: Email Archives (partial view) -->
+  <rect x="15" y="430" width="270" height="80" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" opacity="0.7" />
+  <circle cx="35" cy="455" r="15" fill="rgba(168, 148, 255, 0.1)" />
+  <text x="35" y="459" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">✉️</text>
+  <text x="60" y="450" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Email Archives</text>
+  <text x="60" y="465" font-family="Arial" font-size="10" fill="#D2D2EF">
+    Analyze patterns from email exports
+    (Gmail, Outlook)
+  </text>
+  
+  <!-- Tab Bar Items -->
+  <g>
+    <!-- Home -->
+    <text x="37.5" y="545" font-family="Arial" font-size="16" fill="#D2D2EF" text-anchor="middle">⌂</text>
+    <text x="37.5" y="565" font-family="Arial" font-size="8" fill="#D2D2EF" text-anchor="middle">Home</text>
+    
+    <!-- Chat -->
+    <text x="112.5" y="545" font-family="Arial" font-size="16" fill="#D2D2EF" text-anchor="middle">💬</text>
+    <text x="112.5" y="565" font-family="Arial" font-size="8" fill="#D2D2EF" text-anchor="middle">Chat</text>
+    
+    <!-- Data (Active) -->
+    <text x="187.5" y="545" font-family="Arial" font-size="16" fill="#A894FF" text-anchor="middle">☁︎</text>
+    <text x="187.5" y="565" font-family="Arial" font-size="8" fill="#A894FF" text-anchor="middle">Data</text>
+    
+    <!-- Settings -->
+    <text x="262.5" y="545" font-family="Arial" font-size="16" fill="#D2D2EF" text-anchor="middle">⚙</text>
+    <text x="262.5" y="565" font-family="Arial" font-size="8" fill="#D2D2EF" text-anchor="middle">Settings</text>
+  </g>
+  
+  <!-- Action Message -->
+  <rect x="45" y="500" width="210" height="30" rx="5" fill="rgba(168, 148, 255, 0.2)" />
+  <rect x="45" y="500" width="3" height="30" fill="#A894FF" />
+  <text x="60" y="520" font-family="Arial" font-size="10" fill="#F8E9B4">Data source added successfully!</text>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="backgroundGradient" x1="0" y1="0" x2="0" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B0B23" />
+      <stop offset="1" stop-color="#151540" />
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="300" height="600" viewBox="0 0 300 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="600" rx="20" fill="url(#backgroundGradient)" />
+  
+  <!-- Header -->
+  <g>
+    <text x="20" y="45" font-family="Arial" font-size="18" font-weight="bold" fill="#F8E9B4">Good evening, Alex</text>
+    <!-- Small Orb -->
+    <circle cx="270" cy="35" r="20" fill="url(#orbGradient)" opacity="0.8" />
+    <circle cx="270" cy="35" r="12" fill="url(#orbGradient)" opacity="0.6" />
+    <circle cx="270" cy="35" r="6" fill="url(#orbGradient)" />
+  </g>
+  
+  <!-- Stats Card -->
+  <rect x="15" y="65" width="270" height="100" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  <text x="25" y="85" font-family="Arial" font-size="10" letter-spacing="1.5" fill="#A894FF">YOUR DATA</text>
+  
+  <!-- Stats Grid -->
+  <g>
+    <!-- Data Points -->
+    <text x="60" y="115" font-family="Arial" font-size="22" font-weight="bold" fill="#F8E9B4" text-anchor="middle">184</text>
+    <text x="60" y="135" font-family="Arial" font-size="10" fill="#D2D2EF" text-anchor="middle">Data Points</text>
+    
+    <!-- Insights -->
+    <text x="150" y="115" font-family="Arial" font-size="22" font-weight="bold" fill="#F8E9B4" text-anchor="middle">7</text>
+    <text x="150" y="135" font-family="Arial" font-size="10" fill="#D2D2EF" text-anchor="middle">Insights</text>
+    
+    <!-- Last Active -->
+    <text x="240" y="115" font-family="Arial" font-size="22" font-weight="bold" fill="#F8E9B4" text-anchor="middle">Today</text>
+    <text x="240" y="135" font-family="Arial" font-size="10" fill="#D2D2EF" text-anchor="middle">Last Active</text>
+  </g>
+  
+  <!-- Recent Insights Section Header -->
+  <text x="20" y="195" font-family="Arial" font-size="10" letter-spacing="1.5" fill="#D2D2EF">RECENT INSIGHTS</text>
+  <g>
+    <text x="256" y="195" font-family="Arial" font-size="10" fill="#A894FF" text-anchor="middle">View All</text>
+    <path d="M262 194 L267 194.5 L262 195" stroke="#A894FF" stroke-width="1" fill="none" />
+  </g>
+  
+  <!-- Insight Card 1 -->
+  <rect x="15" y="205" width="270" height="80" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  <circle cx="35" cy="240" r="15" fill="rgba(46, 196, 182, 0.1)" />
+  <text x="35" y="244" font-family="Arial" font-size="14" fill="#2EC4B6" text-anchor="middle">↗</text>
+  <text x="60" y="225" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Digital Wellness Score</text>
+  <text x="60" y="245" font-family="Arial" font-size="12" fill="#D2D2EF">Your screen time has decreased by 22% this week.</text>
+  
+  <!-- Insight Card 2 -->
+  <rect x="15" y="295" width="270" height="80" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  <circle cx="35" cy="330" r="15" fill="rgba(255, 209, 102, 0.1)" />
+  <text x="35" y="334" font-family="Arial" font-size="14" fill="#FFD166" text-anchor="middle">★</text>
+  <text x="60" y="315" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Content Discovery</text>
+  <text x="60" y="335" font-family="Arial" font-size="12" fill="#D2D2EF">You've been exploring 3 new topic areas this month.</text>
+  
+  <!-- Quick Actions Section -->
+  <text x="20" y="405" font-family="Arial" font-size="10" letter-spacing="1.5" fill="#D2D2EF">QUICK ACTIONS</text>
+  
+  <!-- Action Buttons -->
+  <g>
+    <!-- Chat -->
+    <circle cx="50" cy="440" r="25" fill="rgba(168, 148, 255, 0.1)" stroke="rgba(168, 148, 255, 0.2)" stroke-width="1" />
+    <text x="50" y="444" font-family="Arial" font-size="16" fill="#A894FF" text-anchor="middle">💬</text>
+    <text x="50" y="480" font-family="Arial" font-size="10" fill="#D2D2EF" text-anchor="middle">Chat</text>
+    
+    <!-- Add Data -->
+    <circle cx="150" cy="440" r="25" fill="rgba(168, 148, 255, 0.1)" stroke="rgba(168, 148, 255, 0.2)" stroke-width="1" />
+    <text x="150" y="444" font-family="Arial" font-size="16" fill="#A894FF" text-anchor="middle">☁︎</text>
+    <text x="150" y="480" font-family="Arial" font-size="10" fill="#D2D2EF" text-anchor="middle">Add Data</text>
+    
+    <!-- Insights -->
+    <circle cx="250" cy="440" r="25" fill="rgba(168, 148, 255, 0.1)" stroke="rgba(168, 148, 255, 0.2)" stroke-width="1" />
+    <text x="250" y="444" font-family="Arial" font-size="16" fill="#A894FF" text-anchor="middle">📊</text>
+    <text x="250" y="480" font-family="Arial" font-size="10" fill="#D2D2EF" text-anchor="middle">Insights</text>
+  </g>
+  
+  <!-- Tab Bar Background -->
+  <rect x="0" y="540" width="300" height="60" fill="rgba(11, 11, 35, 0.8)" />
+  
+  <!-- Tab Bar Items -->
+  <g>
+    <!-- Home (Active) -->
+    <text x="37.5" y="570" font-family="Arial" font-size="16" fill="#A894FF" text-anchor="middle">⌂</text>
+    <text x="37.5" y="590" font-family="Arial" font-size="8" fill="#A894FF" text-anchor="middle">Home</text>
+    
+    <!-- Chat -->
+    <text x="112.5" y="570" font-family="Arial" font-size="16" fill="#D2D2EF" text-anchor="middle">💬</text>
+    <text x="112.5" y="590" font-family="Arial" font-size="8" fill="#D2D2EF" text-anchor="middle">Chat</text>
+    
+    <!-- Data -->
+    <text x="187.5" y="570" font-family="Arial" font-size="16" fill="#D2D2EF" text-anchor="middle">☁︎</text>
+    <text x="187.5" y="590" font-family="Arial" font-size="8" fill="#D2D2EF" text-anchor="middle">Data</text>
+    
+    <!-- Settings -->
+    <text x="262.5" y="570" font-family="Arial" font-size="16" fill="#D2D2EF" text-anchor="middle">⚙</text>
+    <text x="262.5" y="590" font-family="Arial" font-size="8" fill="#D2D2EF" text-anchor="middle">Settings</text>
+  </g>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="backgroundGradient" x1="0" y1="0" x2="0" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B0B23" />
+      <stop offset="1" stop-color="#151540" />
+    </linearGradient>
+    <linearGradient id="orbGradient" x1="250" y1="15" x2="290" y2="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A894FF" />
+      <stop offset="1" stop-color="#8F7BEE" />
+    </linearGradient>
+  </defs>
+</svg>
