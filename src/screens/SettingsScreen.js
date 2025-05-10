@@ -1,545 +1,319 @@
+/**
+ * Settings screen for configuring app preferences and managing user profile
+ */
 import React, { useState, useEffect } from 'react';
 import {
+  StyleSheet,
   View,
   Text,
-  StyleSheet,
   ScrollView,
+  TouchableOpacity,
   Switch,
   Alert,
-  TouchableOpacity,
-  Linking
+  Animated,
+  Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing
-} from 'react-native-reanimated';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
-import * as DocumentPicker from 'expo-document-picker';
-import * as Sharing from 'expo-sharing';
+import { Ionicons } from '@expo/vector-icons';
 
-import Header from '../components/Header';
+import GradientBackground from '../components/GradientBackground';
 import GlassmorphicCard from '../components/GlassmorphicCard';
 import Button from '../components/Button';
-import IconButton from '../components/IconButton';
-import { fadeInUp } from '../utils/animations';
+import AnimatedOrb from '../components/AnimatedOrb';
 import theme from '../theme';
+import { fadeInUp } from '../utils/animations';
+import { getData, storeData, removeData } from '../utils/storage';
 
+/**
+ * Settings screen component
+ * @returns {React.ReactElement} - Rendered component
+ */
 const SettingsScreen = ({ navigation }) => {
-  // State variables
-  const [userData, setUserData] = useState({ name: 'Voa' });
-  const [isPrivacyEnabled, setIsPrivacyEnabled] = useState(true);
-  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
-  const [isDarkTheme, setIsDarkTheme] = useState(true);
-  const [connectedSources, setConnectedSources] = useState({});
+  const [userData, setUserData] = useState(null);
+  const [settings, setSettings] = useState({
+    notifications: true,
+    darkMode: true,
+    dataProcessing: true,
+    enhancedProfiling: false,
+  });
+  const [version, setVersion] = useState("1.0.0");
   
-  const insets = useSafeAreaInsets();
-  
-  // Animation values
-  const headerOpacity = useSharedValue(0);
-  const contentOpacity = useSharedValue(0);
+  // Animation styles
+  const headerAnim = fadeInUp(100);
+  const profileAnim = fadeInUp(300);
+  const settingsAnim = fadeInUp(500);
+  const actionsAnim = fadeInUp(700);
   
   useEffect(() => {
-    // Load user settings
-    const loadSettings = async () => {
+    // Load user data and settings
+    const loadData = async () => {
       try {
-        // Load user data
-        const userDataStr = await AsyncStorage.getItem('onboardingData');
-        if (userDataStr) {
-          setUserData(JSON.parse(userDataStr));
+        const userData = await getData('userData');
+        if (userData) {
+          setUserData(userData);
         }
         
-        // Load preferences
-        const privacyEnabled = await AsyncStorage.getItem('privacyEnabled');
-        setIsPrivacyEnabled(privacyEnabled !== 'false');
-        
-        const notificationsEnabled = await AsyncStorage.getItem('notificationsEnabled');
-        setIsNotificationsEnabled(notificationsEnabled !== 'false');
-        
-        const darkTheme = await AsyncStorage.getItem('darkTheme');
-        setIsDarkTheme(darkTheme !== 'false');
-        
-        // Load connected data sources
-        try {
-          const sources = await FileSystem.readAsStringAsync(
-            FileSystem.documentDirectory + 'connectedSources.json'
-          );
-          setConnectedSources(JSON.parse(sources));
-        } catch (error) {
-          console.log('No connected sources file found');
-          setConnectedSources({});
+        const savedSettings = await getData('settings');
+        if (savedSettings) {
+          setSettings(savedSettings);
         }
       } catch (error) {
-        console.error('Error loading settings:', error);
+        console.error('Error loading settings data:', error);
       }
     };
     
-    loadSettings();
-    
-    // Start animations
-    headerOpacity.value = withTiming(1, { duration: 600 });
-    contentOpacity.value = withDelay(
-      300, 
-      withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) })
-    );
+    loadData();
   }, []);
   
-  // Save setting changes
-  const saveSetting = async (key, value) => {
+  const handleToggleSetting = async (key) => {
     try {
-      await AsyncStorage.setItem(key, String(value));
-    } catch (error) {
-      console.error(`Error saving ${key}:`, error);
-    }
-  };
-  
-  // Toggle handlers
-  const togglePrivacy = () => {
-    const newValue = !isPrivacyEnabled;
-    setIsPrivacyEnabled(newValue);
-    saveSetting('privacyEnabled', newValue);
-  };
-  
-  const toggleNotifications = () => {
-    const newValue = !isNotificationsEnabled;
-    setIsNotificationsEnabled(newValue);
-    saveSetting('notificationsEnabled', newValue);
-  };
-  
-  const toggleTheme = () => {
-    const newValue = !isDarkTheme;
-    setIsDarkTheme(newValue);
-    saveSetting('darkTheme', newValue);
-  };
-  
-  // Export user data
-  const handleExportData = async () => {
-    try {
-      // Create a temporary directory for export
-      const exportDir = FileSystem.cacheDirectory + 'export/';
-      await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true }).catch(() => {});
-      
-      // Gather all user data
-      const exportData = {
-        userData: userData,
-        preferences: {
-          privacyEnabled: isPrivacyEnabled,
-          notificationsEnabled: isNotificationsEnabled,
-          darkTheme: isDarkTheme,
-        },
-        connectedSources: connectedSources,
+      const updatedSettings = {
+        ...settings,
+        [key]: !settings[key]
       };
       
-      // Add conversations if they exist
-      try {
-        const conversations = await AsyncStorage.getItem('messages');
-        if (conversations) {
-          exportData.conversations = JSON.parse(conversations);
-        }
-      } catch (error) {
-        console.log('No conversations to export');
-      }
-      
-      // Write to file
-      const fileUri = exportDir + 'voa_data_export.json';
-      await FileSystem.writeAsStringAsync(
-        fileUri,
-        JSON.stringify(exportData, null, 2)
-      );
-      
-      // Share the file
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
-      } else {
-        Alert.alert(
-          'Sharing not available',
-          'Sharing is not available on this device'
-        );
-      }
+      setSettings(updatedSettings);
+      await storeData('settings', updatedSettings);
     } catch (error) {
-      console.error('Error exporting data:', error);
-      Alert.alert(
-        'Export Failed',
-        'There was an error exporting your data. Please try again.'
-      );
+      console.error('Error saving settings:', error);
     }
   };
   
-  // Import data
-  const handleImportData = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/json',
-        copyToCacheDirectory: true,
-      });
-      
-      if (result.type === 'success') {
-        const fileContent = await FileSystem.readAsStringAsync(result.uri);
-        const importedData = JSON.parse(fileContent);
-        
-        // Confirm before overwriting
-        Alert.alert(
-          'Import Data',
-          'This will replace your current data. Are you sure you want to continue?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Import',
-              onPress: async () => {
-                // Store user data
-                if (importedData.userData) {
-                  await AsyncStorage.setItem(
-                    'onboardingData', 
-                    JSON.stringify(importedData.userData)
-                  );
-                  setUserData(importedData.userData);
-                }
-                
-                // Store preferences
-                if (importedData.preferences) {
-                  const { privacyEnabled, notificationsEnabled, darkTheme } = importedData.preferences;
-                  
-                  await saveSetting('privacyEnabled', privacyEnabled);
-                  await saveSetting('notificationsEnabled', notificationsEnabled);
-                  await saveSetting('darkTheme', darkTheme);
-                  
-                  setIsPrivacyEnabled(privacyEnabled);
-                  setIsNotificationsEnabled(notificationsEnabled);
-                  setIsDarkTheme(darkTheme);
-                }
-                
-                // Store connected sources
-                if (importedData.connectedSources) {
-                  await FileSystem.writeAsStringAsync(
-                    FileSystem.documentDirectory + 'connectedSources.json',
-                    JSON.stringify(importedData.connectedSources)
-                  );
-                  setConnectedSources(importedData.connectedSources);
-                }
-                
-                // Store conversations
-                if (importedData.conversations) {
-                  await AsyncStorage.setItem(
-                    'messages',
-                    JSON.stringify(importedData.conversations)
-                  );
-                }
-                
-                Alert.alert('Success', 'Data imported successfully');
-              },
-            },
-          ]
-        );
-      }
-    } catch (error) {
-      console.error('Error importing data:', error);
-      Alert.alert(
-        'Import Failed',
-        'There was an error importing your data. Please make sure it is a valid Voa export file.'
-      );
-    }
-  };
-  
-  // Wipe all data
-  const handleWipeData = () => {
+  const handleClearData = () => {
     Alert.alert(
-      'Wipe All Data',
-      'This will permanently delete all your data. This action cannot be undone. Are you sure?',
+      "Clear All Data",
+      "Are you sure you want to clear all your data? This action cannot be undone.",
       [
         {
-          text: 'Cancel',
-          style: 'cancel',
+          text: "Cancel",
+          style: "cancel"
         },
-        {
-          text: 'Delete Everything',
-          style: 'destructive',
+        { 
+          text: "Clear Data", 
+          style: "destructive",
           onPress: async () => {
             try {
-              // Clear AsyncStorage
-              await AsyncStorage.clear();
+              // Keep user data but clear messages and dataSources
+              await removeData('messages');
+              await removeData('dataSources');
               
-              // Clear file system - except essential app files
-              const dataDir = FileSystem.documentDirectory;
-              const items = await FileSystem.readDirectoryAsync(dataDir);
+              Alert.alert(
+                "Data Cleared",
+                "All your data has been successfully cleared."
+              );
+            } catch (error) {
+              console.error('Error clearing data:', error);
+              Alert.alert(
+                "Error",
+                "There was an error clearing your data. Please try again."
+              );
+            }
+          }
+        }
+      ]
+    );
+  };
+  
+  const handleResetOnboarding = () => {
+    Alert.alert(
+      "Reset Onboarding",
+      "This will reset your preferences and take you through the onboarding process again. Continue?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Reset", 
+          onPress: async () => {
+            try {
+              await removeData('userData');
               
-              for (const item of items) {
-                // Skip certain essential files if needed
-                await FileSystem.deleteAsync(dataDir + item).catch(() => {});
-              }
-              
-              // Reset state
-              setConnectedSources({});
-              setUserData({ name: 'Voa' });
-              
-              // Return to onboarding
+              // Navigate back to onboarding
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Onboarding' }],
               });
             } catch (error) {
-              console.error('Error wiping data:', error);
+              console.error('Error resetting onboarding:', error);
               Alert.alert(
-                'Error',
-                'There was a problem wiping your data. Some data may remain.'
+                "Error",
+                "There was an error resetting onboarding. Please try again."
               );
             }
-          },
-        },
+          }
+        }
       ]
     );
   };
   
-  // Animated styles
-  const headerStyle = useAnimatedStyle(() => {
-    return {
-      opacity: headerOpacity.value,
-    };
-  });
-  
-  const contentStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-    };
-  });
-  
-  // Render a setting item
-  const renderSetting = (title, description, value, onToggle, icon) => {
-    return (
-      <View style={styles.settingItem}>
-        <View style={styles.settingIcon}>
-          <Feather name={icon} size={20} color={theme.colors.accent.primary} />
-        </View>
-        <View style={styles.settingContent}>
-          <Text style={styles.settingTitle}>{title}</Text>
-          <Text style={styles.settingDescription}>{description}</Text>
-        </View>
-        <Switch
-          value={value}
-          onValueChange={onToggle}
-          trackColor={{
-            false: 'rgba(35, 35, 60, 0.8)',
-            true: 'rgba(168, 148, 255, 0.6)',
-          }}
-          thumbColor={value ? theme.colors.accent.primary : theme.colors.text.secondary}
-        />
-      </View>
-    );
-  };
-  
   return (
-    <View style={styles.container}>
-      <Animated.View style={headerStyle}>
-        <Header
-          title="Settings"
-          leftIcon="arrow-left"
-          onLeftPress={() => navigation.goBack()}
-        />
-      </Animated.View>
-      
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 20 }
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View style={[styles.content, contentStyle]}>
-          {/* Profile Section */}
-          <GlassmorphicCard style={styles.profileCard}>
-            <View style={styles.profileHeader}>
-              <View style={styles.profileAvatarContainer}>
-                <Text style={styles.profileAvatarText}>
-                  {userData.name ? userData.name.charAt(0) : 'V'}
-                </Text>
+    <GradientBackground>
+      <View style={styles.container}>
+        <Animated.View style={[styles.header, headerAnim]}>
+          <Text style={styles.headerTitle}>SETTINGS</Text>
+        </Animated.View>
+        
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* User Profile */}
+          <Animated.View style={profileAnim}>
+            <GlassmorphicCard style={styles.profileCard}>
+              <View style={styles.profileContent}>
+                <View style={styles.profileOrbContainer}>
+                  <AnimatedOrb size="small" enhanced3d glow />
+                </View>
+                <View style={styles.profileDetails}>
+                  <Text style={styles.profileName}>
+                    {userData?.name || 'User'}
+                  </Text>
+                  <Text style={styles.profileType}>
+                    {userData?.tone ? `${userData.tone.charAt(0).toUpperCase() + userData.tone.slice(1)} communication style` : 'No preferences set'}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{userData.name || 'Voa'}</Text>
-                <Text style={styles.profileTone}>
-                  {userData.tone ? `${userData.tone.charAt(0).toUpperCase() + userData.tone.slice(1)} tone` : 'AI Companion'}
-                </Text>
-              </View>
-            </View>
-            
-            <Text style={styles.profileIntention}>
-              {userData.intention || 'Your personal AI companion helping you understand your data patterns.'}
-            </Text>
-          </GlassmorphicCard>
+              <TouchableOpacity 
+                style={styles.editProfileButton}
+                onPress={handleResetOnboarding}
+              >
+                <Text style={styles.editProfileText}>Edit Profile</Text>
+              </TouchableOpacity>
+            </GlassmorphicCard>
+          </Animated.View>
           
-          {/* Privacy & Security */}
-          <Text style={styles.sectionTitle}>Privacy & Security</Text>
-          <GlassmorphicCard style={styles.settingsCard}>
-            {renderSetting(
-              'Enhanced Privacy',
-              'Process all data locally without server uploads',
-              isPrivacyEnabled,
-              togglePrivacy,
-              'shield'
-            )}
+          {/* App Settings */}
+          <Animated.View style={settingsAnim}>
+            <Text style={styles.sectionTitle}>APP SETTINGS</Text>
             
-            {renderSetting(
-              'Notifications',
-              'Receive insight updates and reminders',
-              isNotificationsEnabled,
-              toggleNotifications,
-              'bell'
-            )}
-            
-            {renderSetting(
-              'Dark Theme',
-              'Use dark mode throughout the app',
-              isDarkTheme,
-              toggleTheme,
-              'moon'
-            )}
-          </GlassmorphicCard>
+            <GlassmorphicCard style={styles.settingsCard}>
+              <View style={styles.settingItem}>
+                <View style={styles.settingLabelContainer}>
+                  <Ionicons name="notifications" size={20} color={theme.colors.text.primary} />
+                  <Text style={styles.settingLabel}>Notifications</Text>
+                </View>
+                <Switch
+                  value={settings.notifications}
+                  onValueChange={() => handleToggleSetting('notifications')}
+                  trackColor={{ 
+                    false: 'rgba(255, 255, 255, 0.1)', 
+                    true: 'rgba(168, 148, 255, 0.6)' 
+                  }}
+                  thumbColor={settings.notifications ? theme.colors.accent.primary : 'rgba(255, 255, 255, 0.5)'}
+                  ios_backgroundColor="rgba(255, 255, 255, 0.1)"
+                />
+              </View>
+              
+              <View style={styles.settingDivider} />
+              
+              <View style={styles.settingItem}>
+                <View style={styles.settingLabelContainer}>
+                  <Ionicons name="moon" size={20} color={theme.colors.text.primary} />
+                  <Text style={styles.settingLabel}>Dark Mode</Text>
+                </View>
+                <Switch
+                  value={settings.darkMode}
+                  onValueChange={() => handleToggleSetting('darkMode')}
+                  trackColor={{ 
+                    false: 'rgba(255, 255, 255, 0.1)', 
+                    true: 'rgba(168, 148, 255, 0.6)' 
+                  }}
+                  thumbColor={settings.darkMode ? theme.colors.accent.primary : 'rgba(255, 255, 255, 0.5)'}
+                  ios_backgroundColor="rgba(255, 255, 255, 0.1)"
+                />
+              </View>
+              
+              <View style={styles.settingDivider} />
+              
+              <View style={styles.settingItem}>
+                <View style={styles.settingLabelContainer}>
+                  <Ionicons name="analytics" size={20} color={theme.colors.text.primary} />
+                  <Text style={styles.settingLabel}>Data Processing</Text>
+                </View>
+                <Switch
+                  value={settings.dataProcessing}
+                  onValueChange={() => handleToggleSetting('dataProcessing')}
+                  trackColor={{ 
+                    false: 'rgba(255, 255, 255, 0.1)', 
+                    true: 'rgba(168, 148, 255, 0.6)' 
+                  }}
+                  thumbColor={settings.dataProcessing ? theme.colors.accent.primary : 'rgba(255, 255, 255, 0.5)'}
+                  ios_backgroundColor="rgba(255, 255, 255, 0.1)"
+                />
+              </View>
+              
+              <View style={styles.settingDivider} />
+              
+              <View style={styles.settingItem}>
+                <View style={styles.settingLabelContainer}>
+                  <Ionicons name="flask" size={20} color={theme.colors.text.primary} />
+                  <Text style={styles.settingLabel}>Enhanced Profiling</Text>
+                </View>
+                <Switch
+                  value={settings.enhancedProfiling}
+                  onValueChange={() => handleToggleSetting('enhancedProfiling')}
+                  trackColor={{ 
+                    false: 'rgba(255, 255, 255, 0.1)', 
+                    true: 'rgba(168, 148, 255, 0.6)' 
+                  }}
+                  thumbColor={settings.enhancedProfiling ? theme.colors.accent.primary : 'rgba(255, 255, 255, 0.5)'}
+                  ios_backgroundColor="rgba(255, 255, 255, 0.1)"
+                />
+              </View>
+            </GlassmorphicCard>
+          </Animated.View>
           
           {/* Data Management */}
-          <Text style={styles.sectionTitle}>Data Management</Text>
-          <GlassmorphicCard style={styles.settingsCard}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleExportData}
-            >
-              <View style={styles.actionButtonIcon}>
-                <Feather name="download" size={20} color={theme.colors.text.primary} />
-              </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonTitle}>Export Your Data</Text>
-                <Text style={styles.actionButtonDescription}>
-                  Save a copy of all your data and insights
-                </Text>
-              </View>
-              <IconButton
-                name="chevron-right"
-                variant="ghost"
-                size={20}
-                color={theme.colors.text.secondary}
-              />
-            </TouchableOpacity>
+          <Animated.View style={actionsAnim}>
+            <Text style={styles.sectionTitle}>DATA MANAGEMENT</Text>
             
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleImportData}
-            >
-              <View style={styles.actionButtonIcon}>
-                <Feather name="upload" size={20} color={theme.colors.text.primary} />
-              </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonTitle}>Import Data</Text>
-                <Text style={styles.actionButtonDescription}>
-                  Restore from a previous backup
-                </Text>
-              </View>
-              <IconButton
-                name="chevron-right"
-                variant="ghost"
-                size={20}
-                color={theme.colors.text.secondary}
-              />
-            </TouchableOpacity>
+            <GlassmorphicCard style={styles.dataCard}>
+              <TouchableOpacity 
+                style={styles.dataAction}
+                onPress={() => navigation.navigate('DataConnection')}
+              >
+                <View style={styles.dataActionLabelContainer}>
+                  <Ionicons name="cloud-upload" size={20} color={theme.colors.text.primary} />
+                  <Text style={styles.dataActionLabel}>Manage Data Sources</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+              </TouchableOpacity>
+              
+              <View style={styles.settingDivider} />
+              
+              <TouchableOpacity 
+                style={styles.dataAction}
+                onPress={handleClearData}
+              >
+                <View style={styles.dataActionLabelContainer}>
+                  <Ionicons name="trash" size={20} color={theme.colors.text.primary} />
+                  <Text style={styles.dataActionLabel}>Clear All Data</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+              </TouchableOpacity>
+            </GlassmorphicCard>
             
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('DataConnection')}
-            >
-              <View style={styles.actionButtonIcon}>
-                <Feather name="link" size={20} color={theme.colors.text.primary} />
-              </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonTitle}>Manage Data Sources</Text>
-                <Text style={styles.actionButtonDescription}>
-                  Add or remove connected data sources
-                </Text>
-              </View>
-              <IconButton
-                name="chevron-right"
-                variant="ghost"
-                size={20}
-                color={theme.colors.text.secondary}
-              />
-            </TouchableOpacity>
-          </GlassmorphicCard>
-          
-          {/* Danger Zone */}
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <GlassmorphicCard style={styles.settingsCard}>
-            <TouchableOpacity 
-              style={styles.dangerButton}
-              onPress={handleWipeData}
-            >
-              <View style={styles.dangerButtonIcon}>
-                <Feather name="trash-2" size={20} color={theme.colors.ui.error} />
-              </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.dangerButtonTitle}>Wipe All Data</Text>
-                <Text style={styles.actionButtonDescription}>
-                  Permanently delete all your data and reset the app
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </GlassmorphicCard>
-          
-          {/* About */}
-          <Text style={styles.sectionTitle}>About</Text>
-          <GlassmorphicCard style={styles.settingsCard}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => Linking.openURL('https://example.com/privacy')}
-            >
-              <View style={styles.actionButtonIcon}>
-                <Feather name="file-text" size={20} color={theme.colors.text.primary} />
-              </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonTitle}>Privacy Policy</Text>
-                <Text style={styles.actionButtonDescription}>
-                  How we protect your information
-                </Text>
-              </View>
-              <IconButton
-                name="external-link"
-                variant="ghost"
-                size={18}
-                color={theme.colors.text.secondary}
-              />
-            </TouchableOpacity>
+            {/* About */}
+            <Text style={[styles.sectionTitle, styles.aboutTitle]}>ABOUT</Text>
             
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => Linking.openURL('https://example.com/terms')}
-            >
-              <View style={styles.actionButtonIcon}>
-                <Feather name="book" size={20} color={theme.colors.text.primary} />
+            <GlassmorphicCard style={styles.aboutCard}>
+              <View style={styles.aboutRow}>
+                <Text style={styles.aboutLabel}>Version</Text>
+                <Text style={styles.aboutValue}>{version}</Text>
               </View>
-              <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonTitle}>Terms of Service</Text>
-                <Text style={styles.actionButtonDescription}>
-                  Usage terms and conditions
-                </Text>
+              
+              <View style={styles.settingDivider} />
+              
+              <View style={styles.aboutRow}>
+                <Text style={styles.aboutLabel}>Build</Text>
+                <Text style={styles.aboutValue}>{Platform.OS} {(new Date()).getFullYear()}</Text>
               </View>
-              <IconButton
-                name="external-link"
-                variant="ghost"
-                size={18}
-                color={theme.colors.text.secondary}
-              />
-            </TouchableOpacity>
-            
-            <View style={styles.versionContainer}>
-              <Text style={styles.versionText}>Version 1.0.0</Text>
-            </View>
-          </GlassmorphicCard>
-        </Animated.View>
-      </ScrollView>
-    </View>
+            </GlassmorphicCard>
+          </Animated.View>
+        </ScrollView>
+      </View>
+    </GradientBackground>
   );
 };
 
@@ -547,165 +321,132 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...theme.typography.styles.h3,
+    color: theme.colors.text.primary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    textTransform: 'uppercase',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxxl,
   },
-  content: {
-    padding: theme.spacing.xl,
-  },
-  // Profile styles
   profileCard: {
-    marginBottom: theme.spacing.xl,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.md,
   },
-  profileHeader: {
+  profileContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.m,
+    marginBottom: theme.spacing.md,
   },
-  profileAvatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(168, 148, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.m,
+  profileOrbContainer: {
+    width: 40,
+    height: 40,
+    marginRight: theme.spacing.md,
   },
-  profileAvatarText: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading2,
-    color: theme.colors.text.primary,
-  },
-  profileInfo: {
+  profileDetails: {
     flex: 1,
   },
   profileName: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading3,
+    ...theme.typography.styles.h4,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
   },
-  profileTone: {
-    fontFamily: theme.typography.fonts.mono.regular,
-    fontSize: theme.typography.sizes.bodySmall,
+  profileType: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.secondary,
+  },
+  editProfileButton: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: 'rgba(168, 148, 255, 0.15)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(168, 148, 255, 0.3)',
+  },
+  editProfileText: {
+    ...theme.typography.styles.caption,
     color: theme.colors.accent.primary,
   },
-  profileIntention: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.bodySmall,
-    color: theme.colors.text.secondary,
-    lineHeight: theme.typography.lineHeights.bodySmall,
-    fontStyle: 'italic',
-  },
-  // Section styles
   sectionTitle: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.heading4,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.l,
-    marginBottom: theme.spacing.m,
-    paddingHorizontal: theme.spacing.s,
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
   settingsCard: {
-    marginBottom: theme.spacing.l,
+    marginBottom: theme.spacing.md,
   },
-  // Setting item styles
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(168, 148, 255, 0.1)',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.sm,
   },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.m,
-  },
-  settingContent: {
-    flex: 1,
-    marginRight: theme.spacing.m,
-  },
-  settingTitle: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  settingDescription: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-  },
-  // Action button styles
-  actionButton: {
+  settingLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.m,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(168, 148, 255, 0.1)',
   },
-  actionButtonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.m,
-  },
-  actionButtonContent: {
-    flex: 1,
-    marginRight: theme.spacing.s,
-  },
-  actionButtonTitle: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.body,
+  settingLabel: {
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.primary,
-    marginBottom: 2,
+    marginLeft: theme.spacing.md,
   },
-  actionButtonDescription: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
+  settingDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  // Danger zone styles
-  dangerButton: {
+  dataCard: {
+    marginBottom: theme.spacing.lg,
+  },
+  dataAction: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  dataActionLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.m,
   },
-  dangerButtonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 87, 87, 0.1)',
-    justifyContent: 'center',
+  dataActionLabel: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.primary,
+    marginLeft: theme.spacing.md,
+  },
+  aboutTitle: {
+    marginTop: theme.spacing.xl,
+  },
+  aboutCard: {
+    marginBottom: theme.spacing.lg,
+  },
+  aboutRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: theme.spacing.m,
+    paddingVertical: theme.spacing.sm,
   },
-  dangerButtonTitle: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.ui.error,
-    marginBottom: 2,
+  aboutLabel: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
   },
-  // Version styles
-  versionContainer: {
-    paddingVertical: theme.spacing.m,
-    alignItems: 'center',
-  },
-  versionText: {
-    fontFamily: theme.typography.fonts.mono.regular,
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.muted,
+  aboutValue: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.primary,
   },
 });
 

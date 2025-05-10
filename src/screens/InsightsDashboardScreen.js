@@ -1,319 +1,203 @@
+/**
+ * Insights Dashboard screen to display user data insights and analytics
+ */
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
+import {
   StyleSheet,
+  View,
+  Text,
   ScrollView,
-  Dimensions,
-  TouchableOpacity
+  TouchableOpacity,
+  Animated,
+  Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withSequence,
-  Easing,
-  interpolateColor
-} from 'react-native-reanimated';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import Header from '../components/Header';
+import GradientBackground from '../components/GradientBackground';
 import GlassmorphicCard from '../components/GlassmorphicCard';
 import Button from '../components/Button';
 import AnimatedOrb from '../components/AnimatedOrb';
-import { fadeInUp } from '../utils/animations';
 import theme from '../theme';
+import { fadeInUp } from '../utils/animations';
+import { getData } from '../utils/storage';
 
-const { width, height } = Dimensions.get('window');
-
-// Mock insights data - in a real app these would be generated from user data
-const mockInsightCategories = [
-  {
-    id: 'emotions',
-    title: 'Emotional Tone Clusters',
-    description: 'How your emotions have been expressed and clustered',
-    icon: 'heart',
-    insights: [
-      { label: 'Joy', value: 25 },
-      { label: 'Calm', value: 40 },
-      { label: 'Anxiety', value: 15 },
-      { label: 'Focus', value: 20 },
-    ]
-  },
-  {
-    id: 'topics',
-    title: 'Trending Topics',
-    description: 'Subjects and themes appearing in your data',
-    icon: 'trending-up',
-    insights: [
-      { label: 'Creativity', value: 35 },
-      { label: 'Work', value: 30 },
-      { label: 'Relationships', value: 20 },
-      { label: 'Health', value: 15 },
-    ]
-  },
-  {
-    id: 'habits',
-    title: 'Creative Habits',
-    description: 'Patterns in your creative activities and output',
-    icon: 'edit',
-    insights: [
-      { label: 'Morning writing', value: 45 },
-      { label: 'Evening brainstorming', value: 30 },
-      { label: 'Weekend planning', value: 15 },
-      { label: 'Collaborative work', value: 10 },
-    ]
-  },
-  {
-    id: 'patterns',
-    title: 'Behavior Loops',
-    description: 'Recurring patterns in your daily activities',
-    icon: 'repeat',
-    insights: [
-      { label: 'Productive deep work', value: 30 },
-      { label: 'Distraction cycles', value: 25 },
-      { label: 'Rest and reflection', value: 25 },
-      { label: 'Learning and growth', value: 20 },
-    ]
-  }
-];
-
+/**
+ * Insights Dashboard screen component
+ * @returns {React.ReactElement} - Rendered component
+ */
 const InsightsDashboardScreen = ({ navigation }) => {
-  const [userData, setUserData] = useState({ name: 'Voa' });
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [hasConnectedData, setHasConnectedData] = useState(false);
+  const [insights, setInsights] = useState([]);
+  const [hasData, setHasData] = useState(false);
   
-  const insets = useSafeAreaInsets();
-  
-  // Animation values
-  const headerOpacity = useSharedValue(0);
-  const contentOpacity = useSharedValue(0);
-  const categoryAnimations = mockInsightCategories.map(() => ({
-    scale: useSharedValue(0.95),
-    opacity: useSharedValue(0),
-  }));
+  // Animation styles
+  const headerAnim = fadeInUp(100);
+  const contentAnim = fadeInUp(300);
   
   useEffect(() => {
-    // Load user data
-    const loadData = async () => {
+    // Check if user has uploaded any data
+    const checkData = async () => {
       try {
-        const userDataStr = await AsyncStorage.getItem('onboardingData');
-        if (userDataStr) {
-          setUserData(JSON.parse(userDataStr));
-        }
+        const dataSources = await getData('dataSources');
+        setHasData(dataSources && dataSources.length > 0);
         
-        // Check if user has connected any data sources
-        const connectedSourcesStr = await AsyncStorage.getItem('connectedSources');
-        if (connectedSourcesStr) {
-          const sources = JSON.parse(connectedSourcesStr);
-          setHasConnectedData(Object.keys(sources).length > 0);
+        // In a real app, we would fetch actual insights here
+        // For demonstration, we'll use placeholder insights
+        if (dataSources && dataSources.length > 0) {
+          setInsights([
+            {
+              id: 'insight-1',
+              title: 'Digital Wellness',
+              description: 'Your screen time has decreased by 22% compared to last month.',
+              category: 'wellness',
+              date: new Date().toISOString(),
+              icon: 'trending-down',
+              color: theme.colors.success.default,
+            },
+            {
+              id: 'insight-2',
+              title: 'Content Preferences',
+              description: 'You engage 3x more with creative content than news content.',
+              category: 'preferences',
+              date: new Date().toISOString(),
+              icon: 'star',
+              color: theme.colors.warning.default,
+            },
+            {
+              id: 'insight-3',
+              title: 'Communication Patterns',
+              description: 'Your most active communication hours are between 2-4 PM.',
+              category: 'communication',
+              date: new Date().toISOString(),
+              icon: 'chatbubbles',
+              color: theme.colors.accent.primary,
+            },
+          ]);
         }
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error checking data sources:', error);
       }
     };
     
-    loadData();
-    
-    // Start animations
-    headerOpacity.value = withTiming(1, { duration: 600 });
-    contentOpacity.value = withDelay(300, withTiming(1, { duration: 800 }));
-    
-    // Staggered animations for categories
-    categoryAnimations.forEach((anim, index) => {
-      anim.opacity.value = withDelay(
-        400 + (index * 100),
-        withTiming(1, { duration: 800 })
-      );
-      
-      anim.scale.value = withDelay(
-        400 + (index * 100),
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-    });
+    checkData();
   }, []);
   
-  // Animated styles
-  const headerStyle = useAnimatedStyle(() => {
-    return {
-      opacity: headerOpacity.value,
-    };
-  });
+  const renderPlaceholder = () => (
+    <Animated.View style={[styles.placeholder, contentAnim]}>
+      <AnimatedOrb size="small" enhanced3d glow />
+      <Text style={styles.placeholderTitle}>No Insights Yet</Text>
+      <Text style={styles.placeholderText}>
+        Upload your data from social media, notes, or other sources to see personalized insights.
+      </Text>
+      <Button
+        title="Add Data"
+        onPress={() => navigation.navigate('DataConnection')}
+        variant="primary"
+        iconRight="cloud-upload"
+        style={styles.placeholderButton}
+      />
+    </Animated.View>
+  );
   
-  const contentStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-    };
-  });
-  
-  const getCategoryAnimationStyle = (index) => {
-    return useAnimatedStyle(() => {
-      return {
-        opacity: categoryAnimations[index].opacity.value,
-        transform: [{ scale: categoryAnimations[index].scale.value }],
-      };
-    });
-  };
-  
-  // Select a category for detailed view
-  const handleSelectCategory = (category) => {
-    setSelectedCategory(category);
-  };
-  
-  // Go back to category list
-  const handleBackToCategories = () => {
-    setSelectedCategory(null);
-  };
-  
-  // Connect data button handler
-  const handleConnectData = () => {
-    navigation.navigate('DataConnection');
-  };
-  
-  // Render a bar for visualization
-  const renderBar = (item, maxValue) => {
-    const percentage = (item.value / maxValue) * 100;
-    
-    return (
-      <View key={item.label} style={styles.barContainer}>
-        <Text style={styles.barLabel}>{item.label}</Text>
-        <View style={styles.barWrapper}>
-          <Animated.View 
-            style={[
-              styles.bar, 
-              { width: `${percentage}%` }
-            ]} 
-          />
-          <Text style={styles.barValue}>{item.value}%</Text>
+  const renderInsightCard = (insight) => (
+    <GlassmorphicCard key={insight.id} style={styles.insightCard}>
+      <View style={styles.insightHeader}>
+        <View style={[styles.insightIcon, { backgroundColor: `${insight.color}20` }]}>
+          <Ionicons name={insight.icon} size={22} color={insight.color} />
         </View>
+        <Text style={styles.insightCategory}>{insight.category.toUpperCase()}</Text>
       </View>
-    );
-  };
-  
-  // Render a category card
-  const renderCategoryCard = (category, index) => {
-    return (
-      <Animated.View 
-        key={category.id}
-        style={[styles.categoryCardContainer, getCategoryAnimationStyle(index)]}
-      >
-        <GlassmorphicCard 
-          style={styles.categoryCard}
-          hoverEffect
-          onPress={() => handleSelectCategory(category)}
-        >
-          <View style={styles.categoryHeader}>
-            <View style={styles.categoryIconContainer}>
-              <Feather name={category.icon} size={24} color={theme.colors.text.primary} />
-            </View>
-            <Text style={styles.categoryTitle}>{category.title}</Text>
-          </View>
-          <Text style={styles.categoryDescription}>{category.description}</Text>
-        </GlassmorphicCard>
-      </Animated.View>
-    );
-  };
-  
-  // Render the detailed view of a category
-  const renderCategoryDetail = (category) => {
-    const maxValue = Math.max(...category.insights.map(item => item.value));
-    
-    return (
-      <Animated.View 
-        style={[styles.categoryDetailContainer, fadeInUp(0)]}
-        entering={fadeInUp(0)}
-      >
-        <View style={styles.categoryDetailHeader}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackToCategories}
-          >
-            <Feather name="arrow-left" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.categoryDetailTitle}>{category.title}</Text>
-        </View>
-        
-        <Text style={styles.categoryDetailDescription}>{category.description}</Text>
-        
-        <View style={styles.insightsContainer}>
-          {category.insights.map(item => renderBar(item, maxValue))}
-        </View>
-        
-        <View style={styles.insightNotesContainer}>
-          <Text style={styles.insightNotesTitle}>Potential Patterns</Text>
-          <Text style={styles.insightNotesText}>
-            These insights are based on analysis of your connected data. The patterns shown may reveal tendencies in your behavior, thinking, or emotional states over time.
-          </Text>
-        </View>
-      </Animated.View>
-    );
-  };
-  
-  // Render empty state when no data is connected
-  const renderEmptyState = () => {
-    return (
-      <View style={styles.emptyStateContainer}>
-        <AnimatedOrb size={100} intensity={0.8} />
-        <Text style={styles.emptyStateTitle}>No data yet</Text>
-        <Text style={styles.emptyStateDescription}>
-          Connect your data sources to start seeing personalized insights about your patterns and behaviors.
-        </Text>
-        <Button
-          title="Connect Data Sources"
-          onPress={handleConnectData}
-          variant="primary"
-          size="large"
-          style={styles.emptyStateButton}
-        />
+      
+      <Text style={styles.insightTitle}>{insight.title}</Text>
+      <Text style={styles.insightDescription}>{insight.description}</Text>
+      
+      <View style={styles.insightFooter}>
+        <TouchableOpacity style={styles.insightActionButton}>
+          <Text style={styles.insightActionText}>Explore Further</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.accent.primary} />
+        </TouchableOpacity>
       </View>
-    );
-  };
+    </GlassmorphicCard>
+  );
+  
+  const renderCategories = () => (
+    <View style={styles.categoriesRow}>
+      <TouchableOpacity style={styles.categoryChip}>
+        <Text style={styles.categoryChipText}>All</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={[styles.categoryChip, styles.categoryChipInactive]}>
+        <Text style={styles.categoryChipTextInactive}>Wellness</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={[styles.categoryChip, styles.categoryChipInactive]}>
+        <Text style={styles.categoryChipTextInactive}>Preferences</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={[styles.categoryChip, styles.categoryChipInactive]}>
+        <Text style={styles.categoryChipTextInactive}>More</Text>
+      </TouchableOpacity>
+    </View>
+  );
   
   return (
-    <View style={styles.container}>
-      <Animated.View style={headerStyle}>
-        <Header
-          title="Your Insights"
-          leftIcon="arrow-left"
-          onLeftPress={() => navigation.goBack()}
-        />
-      </Animated.View>
-      
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 20 }
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {!hasConnectedData ? (
-          renderEmptyState()
-        ) : (
-          <Animated.View style={[styles.content, contentStyle]}>
-            {!selectedCategory ? (
-              <>
-                <Text style={styles.title}>Your Personal Insights</Text>
-                <Text style={styles.description}>
-                  Explore patterns and trends from your data to gain self-awareness and understanding.
-                </Text>
+    <GradientBackground>
+      <View style={styles.container}>
+        <Animated.View style={[styles.header, headerAnim]}>
+          <Text style={styles.headerTitle}>INSIGHTS</Text>
+        </Animated.View>
+        
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {hasData ? (
+            <Animated.View style={contentAnim}>
+              <Text style={styles.introText}>
+                Personalized analytics based on your data
+              </Text>
+              
+              {renderCategories()}
+              
+              <View style={styles.insightsContainer}>
+                {insights.map(renderInsightCard)}
+              </View>
+              
+              <View style={styles.suggestionSection}>
+                <Text style={styles.sectionTitle}>SUGGESTED ACTIONS</Text>
                 
-                <View style={styles.categoriesContainer}>
-                  {mockInsightCategories.map((category, index) => 
-                    renderCategoryCard(category, index)
-                  )}
-                </View>
-              </>
-            ) : (
-              renderCategoryDetail(selectedCategory)
-            )}
-          </Animated.View>
-        )}
-      </ScrollView>
-    </View>
+                <GlassmorphicCard style={styles.suggestionCard}>
+                  <View style={styles.suggestionContent}>
+                    <Ionicons name="add-circle" size={22} color={theme.colors.accent.primary} />
+                    <Text style={styles.suggestionText}>Upload more data for deeper insights</Text>
+                  </View>
+                  <Button
+                    title="Add Data"
+                    onPress={() => navigation.navigate('DataConnection')}
+                    variant="outline"
+                    size="small"
+                  />
+                </GlassmorphicCard>
+                
+                <GlassmorphicCard style={styles.suggestionCard}>
+                  <View style={styles.suggestionContent}>
+                    <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.accent.primary} />
+                    <Text style={styles.suggestionText}>Ask Voa about these insights</Text>
+                  </View>
+                  <Button
+                    title="Chat"
+                    onPress={() => navigation.navigate('Chat')}
+                    variant="outline"
+                    size="small"
+                  />
+                </GlassmorphicCard>
+              </View>
+            </Animated.View>
+          ) : renderPlaceholder()}
+        </ScrollView>
+      </View>
+    </GradientBackground>
   );
 };
 
@@ -321,170 +205,155 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...theme.typography.styles.h3,
+    color: theme.colors.text.primary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    textTransform: 'uppercase',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxxl,
   },
-  content: {
-    padding: theme.spacing.xl,
-  },
-  title: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading2,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-  },
-  description: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.body,
+  introText: {
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xl,
-    lineHeight: theme.typography.lineHeights.body,
+    textAlign: 'center',
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
-  categoriesContainer: {
-    marginTop: theme.spacing.m,
-  },
-  categoryCardContainer: {
-    marginBottom: theme.spacing.l,
-  },
-  categoryCard: {
-    marginVertical: theme.spacing.xs,
-  },
-  categoryHeader: {
+  categoriesRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.m,
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
   },
-  categoryIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  categoryChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
     backgroundColor: 'rgba(168, 148, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.m,
-  },
-  categoryTitle: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.heading4,
-    color: theme.colors.text.primary,
-  },
-  categoryDescription: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.bodySmall,
-    color: theme.colors.text.secondary,
-    lineHeight: theme.typography.lineHeights.bodySmall,
-  },
-  // Category detail styles
-  categoryDetailContainer: {
-    flex: 1,
-    paddingVertical: theme.spacing.m,
-  },
-  categoryDetailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.l,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.m,
+    borderWidth: 1,
+    borderColor: theme.colors.accent.primary,
   },
-  categoryDetailTitle: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading3,
-    color: theme.colors.text.primary,
+  categoryChipInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  categoryDetailDescription: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.body,
+  categoryChipText: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.accent.primary,
+  },
+  categoryChipTextInactive: {
+    ...theme.typography.styles.caption,
     color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xl,
   },
   insightsContainer: {
-    marginVertical: theme.spacing.l,
+    marginBottom: theme.spacing.xl,
   },
-  barContainer: {
-    marginBottom: theme.spacing.m,
+  insightCard: {
+    marginBottom: theme.spacing.md,
   },
-  barLabel: {
-    fontFamily: theme.typography.fonts.mono.medium,
-    fontSize: theme.typography.sizes.bodySmall,
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  insightIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
+  },
+  insightCategory: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+  },
+  insightTitle: {
+    ...theme.typography.styles.h4,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.xs,
   },
-  barWrapper: {
-    height: 24,
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
-    borderRadius: theme.borderRadius.small,
-    overflow: 'hidden',
+  insightDescription: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.md,
+  },
+  insightFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: theme.spacing.sm,
+  },
+  insightActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  bar: {
-    height: '100%',
-    backgroundColor: theme.colors.accent.primary,
-    borderRadius: theme.borderRadius.small,
+  insightActionText: {
+    ...theme.typography.styles.bodySmall,
+    color: theme.colors.accent.primary,
+    marginRight: theme.spacing.xs,
   },
-  barValue: {
-    position: 'absolute',
-    right: theme.spacing.m,
-    fontFamily: theme.typography.fonts.mono.medium,
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.primary,
+  sectionTitle: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    marginBottom: theme.spacing.sm,
   },
-  insightNotesContainer: {
-    marginTop: theme.spacing.xl,
-    padding: theme.spacing.m,
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
-    borderRadius: theme.borderRadius.medium,
-    borderLeftWidth: 2,
-    borderLeftColor: theme.colors.accent.primary,
+  suggestionSection: {
+    marginTop: theme.spacing.lg,
   },
-  insightNotesTitle: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
-  },
-  insightNotesText: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.bodySmall,
-    color: theme.colors.text.secondary,
-    lineHeight: theme.typography.lineHeights.bodySmall,
-  },
-  // Empty state styles
-  emptyStateContainer: {
-    flex: 1,
+  suggestionCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
-    marginTop: height * 0.1,
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
-  emptyStateTitle: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading3,
+  suggestionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  suggestionText: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.primary,
+    marginLeft: theme.spacing.sm,
+    flex: 1,
+  },
+  placeholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.xxl,
+  },
+  placeholderTitle: {
+    ...theme.typography.styles.h3,
     color: theme.colors.text.primary,
     marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.m,
-    textAlign: 'center',
+    marginBottom: theme.spacing.md,
   },
-  emptyStateDescription: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.body,
+  placeholderText: {
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
-    lineHeight: theme.typography.lineHeights.body,
   },
-  emptyStateButton: {
-    marginTop: theme.spacing.l,
+  placeholderButton: {
+    marginTop: theme.spacing.md,
   },
 });
 

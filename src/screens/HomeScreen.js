@@ -1,234 +1,245 @@
-import React, { useEffect, useState } from 'react';
+/**
+ * Main home screen that serves as the central hub of the app
+ */
+import React, { useState, useEffect } from 'react';
 import { 
+  StyleSheet, 
   View, 
   Text, 
-  StyleSheet, 
   ScrollView, 
   TouchableOpacity,
-  Dimensions
+  Animated,
+  Platform,
+  StatusBar
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withSequence,
-  withSpring,
-  Easing
-} from 'react-native-reanimated';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
+import GradientBackground from '../components/GradientBackground';
 import GlassmorphicCard from '../components/GlassmorphicCard';
 import AnimatedOrb from '../components/AnimatedOrb';
 import Button from '../components/Button';
+import { getData } from '../utils/storage';
+import { fadeInUp, fadeIn } from '../utils/animations';
 import theme from '../theme';
 
-const { width, height } = Dimensions.get('window');
-
+/**
+ * Home screen component
+ * @returns {React.ReactElement} - Rendered component
+ */
 const HomeScreen = ({ navigation }) => {
-  const insets = useSafeAreaInsets();
-  const [userData, setUserData] = useState({ name: 'Voa' });
+  const [userData, setUserData] = useState(null);
+  const [activityStats, setActivityStats] = useState({
+    dataPoints: 0,
+    insights: 0,
+    lastActive: null
+  });
   
-  // Animated values
-  const headerOpacity = useSharedValue(0);
-  const contentOpacity = useSharedValue(0);
-  const orbScale = useSharedValue(0.5);
-  const cardTranslateY = useSharedValue(100);
-  const buttonOpacity = useSharedValue(0);
-  const buttonTranslateY = useSharedValue(30);
+  // Animation styles
+  const headerAnim = fadeIn(500);
+  const statsAnim = fadeInUp(200);
+  const insightsAnim = fadeInUp(400);
+  const actionsAnim = fadeInUp(600);
   
-  useEffect(() => {
-    // Load user data from AsyncStorage
-    const loadUserData = async () => {
-      try {
-        const data = await AsyncStorage.getItem('onboardingData');
-        if (data) {
-          setUserData(JSON.parse(data));
+  // Load user data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadUserData = async () => {
+        try {
+          const userData = await getData('userData');
+          if (userData) {
+            setUserData(userData);
+          }
+          
+          // In a real app, we would load actual stats
+          // For now, using placeholder values just for UI
+          setActivityStats({
+            dataPoints: 184,
+            insights: 7,
+            lastActive: new Date().toISOString()
+          });
+        } catch (error) {
+          console.error('Error loading user data:', error);
         }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      }
-    };
+      };
+      
+      loadUserData();
+      
+      return () => {
+        // Cleanup if needed
+      };
+    }, [])
+  );
+  
+  // Format date to show "Today" or relative days
+  const formatLastActive = (dateString) => {
+    if (!dateString) return 'Never';
     
-    loadUserData();
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
     
-    // Start entrance animations
-    const animationSequence = () => {
-      // Orb animation
-      orbScale.value = withSpring(1, { damping: 14, stiffness: 100 });
-      
-      // Header fade in
-      headerOpacity.value = withDelay(
-        300, 
-        withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) })
-      );
-      
-      // Content fade in and slide up
-      contentOpacity.value = withDelay(
-        600, 
-        withTiming(1, { duration: 800, easing: Easing.out(Easing.cubic) })
-      );
-      
-      cardTranslateY.value = withDelay(
-        600,
-        withSpring(0, { damping: 12, stiffness: 100 })
-      );
-      
-      // Buttons fade in and slide up
-      buttonOpacity.value = withDelay(
-        900,
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      buttonTranslateY.value = withDelay(
-        900,
-        withSpring(0, { damping: 12, stiffness: 100 })
-      );
-    };
-    
-    animationSequence();
-  }, []);
-  
-  // Animated styles
-  const headerStyle = useAnimatedStyle(() => {
-    return {
-      opacity: headerOpacity.value,
-    };
-  });
-  
-  const orbStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: orbScale.value }],
-    };
-  });
-  
-  const contentStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-    };
-  });
-  
-  const cardStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: cardTranslateY.value }],
-    };
-  });
-  
-  const buttonContainerStyle = useAnimatedStyle(() => {
-    return {
-      opacity: buttonOpacity.value,
-      transform: [{ translateY: buttonTranslateY.value }],
-    };
-  });
-  
-  // Navigation handlers
-  const navigateToChat = () => {
-    navigation.navigate('Chat');
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
   };
   
-  const navigateToDataConnection = () => {
-    navigation.navigate('DataConnection');
-  };
-  
-  const navigateToInsights = () => {
-    navigation.navigate('InsightsDashboard');
-  };
-  
-  const navigateToSettings = () => {
-    navigation.navigate('Settings');
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    const name = userData?.name || 'there';
+    
+    if (hour < 12) {
+      return `Good morning, ${name}`;
+    } else if (hour < 18) {
+      return `Good afternoon, ${name}`;
+    } else {
+      return `Good evening, ${name}`;
+    }
   };
   
   return (
-    <ScrollView 
-      style={styles.scrollView} 
-      contentContainerStyle={[
-        styles.container,
-        { paddingTop: insets.top, paddingBottom: insets.bottom + 20 }
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
+    <GradientBackground>
+      <StatusBar barStyle="light-content" />
+      
       {/* Header */}
-      <Animated.View style={[styles.header, headerStyle]}>
+      <Animated.View style={[styles.header, headerAnim]}>
         <View style={styles.headerContent}>
-          <Text style={styles.greeting}>Hello</Text>
-          <TouchableOpacity onPress={navigateToSettings} style={styles.settingsButton}>
-            <Feather name="settings" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
+          <Text style={styles.greeting}>{getTimeBasedGreeting()}</Text>
+          
+          <View style={styles.headerOrb}>
+            <AnimatedOrb 
+              size="small" 
+              enhanced3d 
+              float 
+              glow 
+            />
+          </View>
         </View>
       </Animated.View>
       
-      {/* Orb */}
-      <Animated.View style={[styles.orbContainer, orbStyle]}>
-        <AnimatedOrb size={160} intensity={1.2} />
-      </Animated.View>
-      
-      {/* Main content */}
-      <Animated.View style={[styles.content, contentStyle]}>
-        <Text style={styles.agentName}>{userData.name || 'Voa'}</Text>
-        <Text style={styles.subtitle}>Your personal AI companion</Text>
-      </Animated.View>
-      
-      {/* Intro card */}
-      <Animated.View style={[styles.cardContainer, cardStyle]}>
-        <GlassmorphicCard style={styles.card}>
-          <Text style={styles.cardTitle}>Welcome to Your Journey</Text>
-          <Text style={styles.cardText}>
-            Own your data. Understand yourself. Big tech collects your data to manipulate you. 
-            {userData.name || 'Voa'} helps you reclaim it—to see who you are, how you change, and what you need.
-          </Text>
-        </GlassmorphicCard>
-      </Animated.View>
-      
-      {/* Action buttons */}
-      <Animated.View style={[styles.buttonContainer, buttonContainerStyle]}>
-        <Button
-          title="Start a Conversation"
-          onPress={navigateToChat}
-          variant="primary"
-          size="large"
-          fullWidth
-          leftIcon={<Feather name="message-circle" size={20} color={theme.colors.text.primary} />}
-          style={styles.button}
-        />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Activity Stats */}
+        <Animated.View style={statsAnim}>
+          <GlassmorphicCard style={styles.statsCard}>
+            <Text style={styles.cardTitle}>YOUR DATA</Text>
+            
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{activityStats.dataPoints}</Text>
+                <Text style={styles.statLabel}>Data Points</Text>
+              </View>
+              
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{activityStats.insights}</Text>
+                <Text style={styles.statLabel}>Insights</Text>
+              </View>
+              
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {formatLastActive(activityStats.lastActive)}
+                </Text>
+                <Text style={styles.statLabel}>Last Active</Text>
+              </View>
+            </View>
+          </GlassmorphicCard>
+        </Animated.View>
         
-        <Button
-          title="Connect Your Data"
-          onPress={navigateToDataConnection}
-          variant="secondary"
-          size="large"
-          fullWidth
-          leftIcon={<Feather name="link" size={20} color={theme.colors.text.primary} />}
-          style={styles.button}
-        />
+        {/* Recent Insights */}
+        <Animated.View style={insightsAnim}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>RECENT INSIGHTS</Text>
+            <TouchableOpacity 
+              style={styles.sectionAction}
+              onPress={() => navigation.navigate('InsightsDashboard')}
+            >
+              <Text style={styles.sectionActionText}>View All</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.accent.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          <GlassmorphicCard style={styles.insightCard}>
+            <View style={styles.insightIconContainer}>
+              <Ionicons name="trending-up" size={24} color={theme.colors.success.default} />
+            </View>
+            <View style={styles.insightContent}>
+              <Text style={styles.insightTitle}>Digital Wellness Score</Text>
+              <Text style={styles.insightDescription}>
+                Your screen time has decreased by 22% this week.
+              </Text>
+            </View>
+          </GlassmorphicCard>
+          
+          <GlassmorphicCard style={styles.insightCard}>
+            <View style={styles.insightIconContainer}>
+              <Ionicons name="bulb" size={24} color={theme.colors.warning.default} />
+            </View>
+            <View style={styles.insightContent}>
+              <Text style={styles.insightTitle}>Content Discovery</Text>
+              <Text style={styles.insightDescription}>
+                You've been exploring 3 new topic areas this month.
+              </Text>
+            </View>
+          </GlassmorphicCard>
+        </Animated.View>
         
-        <Button
-          title="View Your Insights"
-          onPress={navigateToInsights}
-          variant="secondary"
-          size="large"
-          fullWidth
-          leftIcon={<Feather name="bar-chart-2" size={20} color={theme.colors.text.primary} />}
-          style={styles.button}
-        />
-      </Animated.View>
-    </ScrollView>
+        {/* Quick Actions */}
+        <Animated.View style={[styles.quickActions, actionsAnim]}>
+          <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
+          
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('Chat')}
+            >
+              <View style={styles.actionIcon}>
+                <Ionicons name="chatbubble" size={22} color={theme.colors.accent.primary} />
+              </View>
+              <Text style={styles.actionText}>Chat</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('DataConnection')}
+            >
+              <View style={styles.actionIcon}>
+                <Ionicons name="cloud-upload" size={22} color={theme.colors.accent.primary} />
+              </View>
+              <Text style={styles.actionText}>Add Data</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('InsightsDashboard')}
+            >
+              <View style={styles.actionIcon}>
+                <Ionicons name="analytics" size={22} color={theme.colors.accent.primary} />
+              </View>
+              <Text style={styles.actionText}>Insights</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </ScrollView>
+    </GradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    alignItems: 'center',
-  },
   header: {
-    width: '100%',
-    paddingHorizontal: theme.spacing.xl,
-    marginBottom: theme.spacing.m,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
   },
   headerContent: {
     flexDirection: 'row',
@@ -236,61 +247,124 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   greeting: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.heading3,
+    ...theme.typography.styles.h3,
     color: theme.colors.text.primary,
+    marginRight: theme.spacing.lg,
   },
-  settingsButton: {
-    padding: theme.spacing.s,
-    borderRadius: theme.borderRadius.circle,
+  headerOrb: {
+    width: 40,
+    height: 40,
   },
-  orbContainer: {
-    marginVertical: theme.spacing.xl,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxxl,
+  },
+  statsCard: {
+    marginBottom: theme.spacing.lg,
+  },
+  cardTitle: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    marginBottom: theme.spacing.md,
+    fontFamily: theme.typography.fonts.primary.medium,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statItem: {
     alignItems: 'center',
   },
-  content: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  agentName: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading1,
+  statValue: {
+    ...theme.typography.styles.h2,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.xs,
   },
-  subtitle: {
-    fontFamily: theme.typography.fonts.mono.regular,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.l,
+  statLabel: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
   },
-  cardContainer: {
-    width: '100%',
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+  },
+  sectionTitle: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    fontFamily: theme.typography.fonts.primary.medium,
+  },
+  sectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionActionText: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.accent.primary,
+  },
+  insightCard: {
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.sm,
+  },
+  insightIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    left: theme.spacing.md,
+    top: '50%',
+    marginTop: -20,
+  },
+  insightContent: {
+    marginLeft: 56,
+    paddingVertical: theme.spacing.sm,
+  },
+  insightTitle: {
+    ...theme.typography.styles.h4,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  insightDescription: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
+  },
+  quickActions: {
+    marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.xl,
   },
-  card: {
-    marginBottom: theme.spacing.m,
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: theme.spacing.md,
   },
-  cardTitle: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.heading4,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.m,
+  actionButton: {
+    alignItems: 'center',
+    width: '30%',
   },
-  cardText: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.body,
+  actionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(168, 148, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(168, 148, 255, 0.2)',
+  },
+  actionText: {
+    ...theme.typography.styles.caption,
     color: theme.colors.text.secondary,
-    lineHeight: theme.typography.lineHeights.body,
-  },
-  buttonContainer: {
-    width: '100%',
-    paddingHorizontal: theme.spacing.xl,
-    marginTop: theme.spacing.m,
-  },
-  button: {
-    marginBottom: theme.spacing.m,
   },
 });
 

@@ -1,288 +1,269 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  TextInput, 
-  KeyboardAvoidingView, 
-  Platform, 
-  FlatList, 
+/**
+ * Chat screen for interacting with the AI assistant
+ */
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  FlatList,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
   Keyboard,
-  ActivityIndicator
+  Animated,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
-  withDelay,
-  Easing
-} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import Header from '../components/Header';
+import GradientBackground from '../components/GradientBackground';
 import MessageBubble from '../components/MessageBubble';
-import AnimatedOrb from '../components/AnimatedOrb';
-import { storeMessages, loadMessages } from '../utils/storage';
-import { fadeInUp } from '../utils/animations';
+import { getData, storeMessages } from '../utils/storage';
 import theme from '../theme';
+import { fadeIn } from '../utils/animations';
 
-const ChatScreen = ({ navigation }) => {
+/**
+ * Chat screen component for conversing with the AI
+ * @returns {React.ReactElement} - Rendered component
+ */
+const ChatScreen = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [userData, setUserData] = useState({ name: 'Voa' });
-  
   const flatListRef = useRef(null);
-  const inputRef = useRef(null);
-  const insets = useSafeAreaInsets();
+  const [userData, setUserData] = useState(null);
   
   // Animation values
-  const inputContainerHeight = useSharedValue(60);
-  const orbScale = useSharedValue(0);
-  const orbOpacity = useSharedValue(0);
-  const headerOpacity = useSharedValue(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
-    // Load user data and previous messages
+    // Fade in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+    
+    // Load messages and user data
     const loadData = async () => {
       try {
-        const userDataStr = await AsyncStorage.getItem('onboardingData');
-        if (userDataStr) {
-          const data = JSON.parse(userDataStr);
-          setUserData(data);
+        const storedMessages = await getData('messages');
+        if (storedMessages && storedMessages.length > 0) {
+          setMessages(storedMessages);
+        } else {
+          // Add a welcome message if there are no messages
+          const welcomeMessage = createWelcomeMessage();
+          setMessages([welcomeMessage]);
+          await storeMessages([welcomeMessage]);
         }
         
-        const savedMessages = await loadMessages();
-        if (savedMessages && savedMessages.length > 0) {
-          setMessages(savedMessages);
-        } else {
-          // Add welcome message if no previous messages
-          const welcomeMessage = {
-            id: Date.now().toString(),
-            text: `Hello! I'm ${userData.name || 'Voa'}, your personal AI companion. How can I help you understand yourself better today?`,
-            isUser: false,
-            timestamp: new Date().toISOString()
-          };
-          setMessages([welcomeMessage]);
-          storeMessages([welcomeMessage]);
+        const userData = await getData('userData');
+        if (userData) {
+          setUserData(userData);
         }
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error loading chat data:', error);
       }
     };
     
     loadData();
-    
-    // Start animations
-    headerOpacity.value = withTiming(1, { duration: 600 });
-    orbScale.value = withDelay(300, withTiming(1, { duration: 800 }));
-    orbOpacity.value = withDelay(300, withTiming(0.8, { duration: 800 }));
-    
-    return () => {
-      // Save messages when leaving the screen
-      if (messages.length > 0) {
-        storeMessages(messages);
-      }
+  }, [fadeAnim]);
+  
+  const createWelcomeMessage = () => {
+    return {
+      id: 'welcome-1',
+      text: "Welcome to Voa. I'm here to help you gain insights from your personal data. How can I assist you today?",
+      sender: 'ai',
+      timestamp: new Date().toISOString(),
     };
-  }, []);
+  };
   
-  useEffect(() => {
-    // Scroll to bottom when messages change
-    if (messages.length > 0 && flatListRef.current) {
-      setTimeout(() => {
-        flatListRef.current.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [messages]);
-  
-  // Handle sending messages
-  const handleSendMessage = async () => {
+  const handleSend = async () => {
     if (!inputText.trim()) return;
     
+    // Create and add user message
     const userMessage = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       text: inputText.trim(),
-      isUser: true,
-      timestamp: new Date().toISOString()
+      sender: 'user',
+      timestamp: new Date().toISOString(),
     };
     
-    // Add user message
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setInputText('');
-    Keyboard.dismiss();
     
-    // Show AI is typing indicator
+    // Simulate AI typing
     setIsTyping(true);
     
-    // Simulate AI response (would connect to actual API in production)
+    // Scroll to bottom
     setTimeout(() => {
-      const aiResponse = {
-        id: (Date.now() + 1).toString(),
-        text: generateAIResponse(inputText, userData.tone || 'neutral'),
-        isUser: false,
-        timestamp: new Date().toISOString()
-      };
-      
-      setIsTyping(false);
-      setMessages([...updatedMessages, aiResponse]);
-      storeMessages([...updatedMessages, aiResponse]);
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    
+    // Save messages
+    await storeMessages(updatedMessages);
+    
+    // In a real app, we would send the message to an API
+    // For now, simulate a response
+    setTimeout(() => {
+      respondToMessage(userMessage.text, updatedMessages);
     }, 1500);
   };
   
-  // Animate input box height when typing
-  const handleInputFocus = () => {
-    inputContainerHeight.value = withTiming(80, { duration: 200 });
-  };
-  
-  const handleInputBlur = () => {
-    inputContainerHeight.value = withTiming(60, { duration: 200 });
-  };
-  
-  // Helper to format timestamp for display
-  const formatMessageTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-  
-  // Animated styles
-  const orbContainerStyle = useAnimatedStyle(() => {
-    return {
-      opacity: orbOpacity.value,
-      transform: [{ scale: orbScale.value }],
-    };
-  });
-  
-  const headerStyle = useAnimatedStyle(() => {
-    return {
-      opacity: headerOpacity.value,
-    };
-  });
-  
-  const inputContainerStyle = useAnimatedStyle(() => {
-    return {
-      height: inputContainerHeight.value,
-    };
-  });
-  
-  // Empty state - if no messages yet
-  if (messages.length === 0) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.accent.primary} />
-      </View>
-    );
-  }
-  
-  // Temporary AI response generator - would be replaced with actual API
-  const generateAIResponse = (userInput, tone) => {
-    const responses = {
-      soft: [
-        "I understand how you feel. Looking at your patterns, I notice you tend to express yourself more creatively in the evenings.",
-        "That's a thoughtful question. When I look at your data, I see a gentle rhythm to how you process information.",
-        "I'm here to support you. Your recent activities suggest you're exploring new perspectives, which is wonderful to see."
-      ],
-      honest: [
-        "Looking directly at your data, I can see you've been inconsistent with your stated goals. Let's address that.",
-        "Your question reveals an interesting pattern. You tend to overthink decisions on Tuesdays and Wednesdays.",
-        "The data shows clear evidence that you perform better when you start early. No ambiguity there."
-      ],
-      poetic: [
-        "Like stars forming constellations, your thoughts seem to cluster around themes of growth and transformation.",
-        "The river of your words flows strongest at dawn and dusk, carrying deeper currents of meaning beneath.",
-        "In the garden of your data, certain ideas bloom repeatedly - a pattern as beautiful as it is revealing."
-      ],
-      neutral: [
-        "Based on the available information, there appears to be a correlation between your productivity and your morning routine.",
-        "The data indicates several recurring patterns in how you approach problems and express ideas.",
-        "When analyzing your recent activities, I notice consistent themes emerging around specific topics."
-      ]
+  const respondToMessage = async (userText, currentMessages) => {
+    // Generate response based on user input
+    // This is just a placeholder - in a real app, this would call an API
+    
+    let responseText = '';
+    const lowerText = userText.toLowerCase();
+    
+    if (lowerText.includes('hello') || lowerText.includes('hi')) {
+      responseText = `Hello${userData?.name ? ` ${userData.name}` : ''}! How can I help you today?`;
+    } else if (lowerText.includes('data') || lowerText.includes('upload')) {
+      responseText = "You can upload your data from the Data Connection screen. I can analyze various sources like social media exports, notes, journals, and more.";
+    } else if (lowerText.includes('insight') || lowerText.includes('analyze')) {
+      responseText = "I can generate insights about your digital behavior, content preferences, and personal patterns. The more data you provide, the more personalized insights I can offer.";
+    } else if (lowerText.includes('help') || lowerText.includes('how')) {
+      responseText = "I'm here to help you understand your digital presence. You can ask me questions about your data, request specific analyses, or explore insights I've already generated.";
+    } else {
+      responseText = "That's an interesting point. As we collect more of your data, I'll be able to provide more personalized responses and insights.";
+    }
+    
+    // Create AI response
+    const aiMessage = {
+      id: `ai-${Date.now()}`,
+      text: responseText,
+      sender: 'ai',
+      timestamp: new Date().toISOString(),
     };
     
-    const selectedTone = responses[tone] || responses.neutral;
-    return selectedTone[Math.floor(Math.random() * selectedTone.length)];
+    // Add AI message to state
+    const updatedMessages = [...currentMessages, aiMessage];
+    setMessages(updatedMessages);
+    setIsTyping(false);
+    
+    // Scroll to bottom
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    
+    // Save messages
+    await storeMessages(updatedMessages);
+  };
+  
+  const renderMessage = ({ item }) => {
+    return (
+      <MessageBubble
+        message={item}
+        isUser={item.sender === 'user'}
+      />
+    );
+  };
+  
+  const renderChatEmpty = () => {
+    return (
+      <View style={styles.emptyContainer}>
+        <Animated.View style={[styles.emptyContent, { opacity: fadeAnim }]}>
+          <Text style={styles.emptyTitle}>Start a conversation</Text>
+          <Text style={styles.emptyText}>
+            Ask me anything about your data, digital behavior, or request insights
+          </Text>
+          
+          <View style={styles.suggestions}>
+            <TouchableOpacity
+              style={styles.suggestionChip}
+              onPress={() => setInputText("What insights can you provide?")}
+            >
+              <Text style={styles.suggestionText}>What insights can you provide?</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.suggestionChip}
+              onPress={() => setInputText("How do I upload my data?")}
+            >
+              <Text style={styles.suggestionText}>How do I upload my data?</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.suggestionChip}
+              onPress={() => setInputText("Tell me about my digital behavior")}
+            >
+              <Text style={styles.suggestionText}>Tell me about my digital behavior</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    );
   };
   
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <Animated.View style={headerStyle}>
-        <Header
-          title={`Chat with ${userData.name || 'Voa'}`}
-          leftIcon="arrow-left"
-          onLeftPress={() => navigation.goBack()}
-        />
-      </Animated.View>
-      
-      <Animated.View style={[styles.orbContainer, orbContainerStyle]}>
-        <AnimatedOrb size={60} intensity={1} />
-      </Animated.View>
-      
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.messagesContainer,
-          { paddingBottom: insets.bottom + 80 }
-        ]}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item, index }) => (
-          <MessageBubble
-            message={item.text}
-            isUser={item.isUser}
-            timestamp={formatMessageTime(item.timestamp)}
-            animate={index === messages.length - 1}
-          />
-        )}
-        ListFooterComponent={
-          isTyping && (
-            <MessageBubble
-              isTyping={true}
-              isUser={false}
-            />
-          )
-        }
-      />
-      
-      <Animated.View style={[styles.inputContainer, inputContainerStyle]}>
-        <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        <View style={styles.inputWrapper}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder={`Ask ${userData.name || 'Voa'} about your patterns...`}
-            placeholderTextColor={theme.colors.text.muted}
-            multiline
-            onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              !inputText.trim() && styles.sendButtonDisabled
-            ]}
-            onPress={handleSendMessage}
-            disabled={!inputText.trim()}
-          >
-            <Feather
-              name="send"
-              size={20}
-              color={inputText.trim() ? theme.colors.text.primary : theme.colors.text.muted}
-            />
-          </TouchableOpacity>
+    <GradientBackground>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : null}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>CHAT</Text>
         </View>
-      </Animated.View>
-    </KeyboardAvoidingView>
+        
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messagesContainer}
+          ListEmptyComponent={renderChatEmpty}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        />
+        
+        {isTyping && (
+          <View style={styles.typingContainer}>
+            <View style={styles.typingContent}>
+              <Text style={styles.typingText}>Voa is typing</Text>
+              <ActivityIndicator size="small" color={theme.colors.accent.primary} />
+            </View>
+          </View>
+        )}
+        
+        <BlurView intensity={30} tint="dark" style={styles.inputContainer}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type a message..."
+              placeholderTextColor={theme.colors.text.tertiary}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+              returnKeyType="default"
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                !inputText.trim() && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={!inputText.trim()}
+            >
+              <Ionicons
+                name="send"
+                size={20}
+                color={
+                  inputText.trim()
+                    ? theme.colors.background.primary
+                    : 'rgba(255, 255, 255, 0.5)'
+                }
+              />
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+      </KeyboardAvoidingView>
+    </GradientBackground>
   );
 };
 
@@ -290,60 +271,115 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...theme.typography.styles.h3,
+    color: theme.colors.text.primary,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    fontFamily: theme.typography.fonts.primary.medium,
+    textTransform: 'uppercase',
+  },
+  messagesContainer: {
+    flexGrow: 1,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
+  emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: theme.spacing.xl,
   },
-  messagesContainer: {
-    paddingHorizontal: theme.spacing.m,
-    paddingTop: theme.spacing.xl,
+  emptyContent: {
+    alignItems: 'center',
   },
-  orbContainer: {
-    position: 'absolute',
-    top: 70,
-    left: '50%',
-    marginLeft: -30,
-    zIndex: 1,
-    opacity: 0.8,
+  emptyTitle: {
+    ...theme.typography.styles.h3,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md,
+  },
+  emptyText: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  suggestions: {
+    alignItems: 'center',
+    marginTop: theme.spacing.lg,
+  },
+  suggestionChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: 'rgba(168, 148, 255, 0.15)',
+    borderRadius: 20,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(168, 148, 255, 0.3)',
+  },
+  suggestionText: {
+    ...theme.typography.styles.bodySmall,
+    color: theme.colors.text.primary,
+  },
+  typingContainer: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  typingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    marginLeft: theme.spacing.sm,
+  },
+  typingText: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.secondary,
+    marginRight: theme.spacing.sm,
   },
   inputContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(168, 148, 255, 0.2)',
-    paddingHorizontal: theme.spacing.m,
-    paddingVertical: theme.spacing.s,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(11, 11, 35, 0.7)',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(25, 25, 50, 0.4)',
-    borderRadius: theme.borderRadius.medium,
-    paddingHorizontal: theme.spacing.m,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 24,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: Platform.OS === 'ios' ? theme.spacing.xs : 0,
   },
-  input: {
+  textInput: {
     flex: 1,
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.primary,
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.body,
-    paddingVertical: theme.spacing.m,
-    maxHeight: 120,
+    maxHeight: 100,
+    paddingVertical: theme.spacing.sm,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(168, 148, 255, 0.2)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.accent.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: theme.spacing.sm,
   },
   sendButtonDisabled: {
-    backgroundColor: 'rgba(168, 148, 255, 0.05)',
+    backgroundColor: 'rgba(168, 148, 255, 0.3)',
   },
 });
 

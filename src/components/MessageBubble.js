@@ -1,191 +1,98 @@
+/**
+ * Message bubble component for chat interface
+ */
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, View, Text, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withDelay,
-  Easing,
-  withTiming
-} from 'react-native-reanimated';
 import theme from '../theme';
 
-const MessageBubble = ({
-  message,
-  isUser = false,
-  timestamp,
-  isTyping = false,
-  animate = true,
-  style
-}) => {
-  const translateY = useSharedValue(20);
-  const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.95);
-  const typing = useSharedValue(isTyping ? 1 : 0);
-  
-  React.useEffect(() => {
-    if (animate) {
-      translateY.value = withSpring(0, { damping: 12, stiffness: 120 });
-      opacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
-      scale.value = withDelay(
-        50, 
-        withSpring(1, { damping: 12, stiffness: 120 })
-      );
-    } else {
-      translateY.value = 0;
-      opacity.value = 1;
-      scale.value = 1;
-    }
-    
-    typing.value = withTiming(isTyping ? 1 : 0, { duration: 300 });
-  }, [isTyping]);
-  
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value,
-      transform: [
-        { translateY: translateY.value },
-        { scale: scale.value }
-      ],
-    };
-  });
-  
-  const renderTypingIndicator = () => {
-    return (
-      <View style={styles.typingContainer}>
-        <Animated.View style={[styles.dot, {
-          opacity: withDelay(0, withRepeat(withTiming(0.4, { duration: 600 }), -1, true))
-        }]} />
-        <Animated.View style={[styles.dot, {
-          opacity: withDelay(200, withRepeat(withTiming(0.4, { duration: 600 }), -1, true))
-        }]} />
-        <Animated.View style={[styles.dot, {
-          opacity: withDelay(400, withRepeat(withTiming(0.4, { duration: 600 }), -1, true))
-        }]} />
-      </View>
-    );
-  };
+/**
+ * Message bubble component for displaying chat messages
+ * @param {Object} props - Component props
+ * @param {Object} props.message - Message object with text, sender, timestamp
+ * @param {boolean} props.isUser - Whether the message is from the user
+ * @returns {React.ReactElement} - Rendered component
+ */
+const MessageBubble = ({ message, isUser }) => {
+  const formattedTime = formatTime(message.timestamp);
   
   return (
-    <Animated.View style={[
+    <View style={[
       styles.container,
-      isUser ? styles.userContainer : styles.aiContainer,
-      animatedStyle,
-      style
+      isUser ? styles.userContainer : styles.aiContainer
     ]}>
       {isUser ? (
-        <View style={[styles.bubble, styles.userBubble]}>
-          <LinearGradient
-            colors={['rgba(168, 148, 255, 0.3)', 'rgba(168, 148, 255, 0.1)']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-          <Text style={[styles.message, styles.userMessage]}>
-            {message}
-          </Text>
+        <View style={styles.userBubble}>
+          <Text style={styles.messageText}>{message.text}</Text>
+          <Text style={styles.timestamp}>{formattedTime}</Text>
         </View>
       ) : (
-        <View style={[styles.bubble, styles.aiBubble]}>
-          <BlurView intensity={10} style={StyleSheet.absoluteFill}>
-            <LinearGradient
-              colors={['rgba(35, 35, 60, 0.6)', 'rgba(20, 20, 40, 0.4)']}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
-          </BlurView>
-          {isTyping ? (
-            renderTypingIndicator()
-          ) : (
-            <Text style={[styles.message, styles.aiMessage]}>
-              {message}
-            </Text>
-          )}
-        </View>
+        <LinearGradient
+          colors={['rgba(168, 148, 255, 0.15)', 'rgba(168, 148, 255, 0.05)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.aiBubble}
+        >
+          <Text style={styles.messageText}>{message.text}</Text>
+          <Text style={styles.timestamp}>{formattedTime}</Text>
+        </LinearGradient>
       )}
-      
-      {timestamp && (
-        <Text style={[
-          styles.timestamp,
-          isUser ? styles.userTimestamp : styles.aiTimestamp,
-        ]}>
-          {timestamp}
-        </Text>
-      )}
-    </Animated.View>
+    </View>
   );
+};
+
+/**
+ * Format timestamp to display time in 12-hour format
+ * @param {string} isoString - ISO timestamp string
+ * @returns {string} - Formatted time string (e.g., "2:30 PM")
+ */
+const formatTime = (isoString) => {
+  if (!isoString) return '';
+  
+  const date = new Date(isoString);
+  return date.toLocaleTimeString([], { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: theme.spacing.s,
+    marginVertical: theme.spacing.xs,
     maxWidth: '85%',
   },
   userContainer: {
     alignSelf: 'flex-end',
-    marginRight: theme.spacing.m,
+    marginLeft: '15%',
   },
   aiContainer: {
     alignSelf: 'flex-start',
-    marginLeft: theme.spacing.m,
-  },
-  bubble: {
-    borderRadius: theme.borderRadius.medium,
-    overflow: 'hidden',
-    minHeight: 36,
+    marginRight: '15%',
   },
   userBubble: {
-    backgroundColor: 'rgba(168, 148, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(168, 148, 255, 0.3)',
+    backgroundColor: theme.colors.accent.primary,
+    borderRadius: 20,
+    borderBottomRightRadius: 4,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   aiBubble: {
-    backgroundColor: 'rgba(25, 25, 50, 0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(248, 233, 180, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    borderBottomLeftRadius: 4,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
-  message: {
-    padding: theme.spacing.m,
-    fontSize: theme.typography.sizes.body,
-  },
-  userMessage: {
+  messageText: {
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.primary,
-    fontFamily: theme.typography.fonts.serif.regular,
-  },
-  aiMessage: {
-    color: theme.colors.text.primary,
-    fontFamily: theme.typography.fonts.serif.regular,
-    lineHeight: theme.typography.lineHeights.body,
   },
   timestamp: {
-    fontSize: theme.typography.sizes.tiny,
+    ...theme.typography.styles.caption,
+    color: 'rgba(255, 255, 255, 0.5)',
     marginTop: theme.spacing.xs,
-    marginHorizontal: theme.spacing.s,
-  },
-  userTimestamp: {
     alignSelf: 'flex-end',
-    color: theme.colors.text.muted,
-  },
-  aiTimestamp: {
-    alignSelf: 'flex-start',
-    color: theme.colors.text.muted,
-  },
-  typingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.m,
-    height: 36,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.text.primary,
-    marginHorizontal: 3,
   },
 });
 

@@ -1,90 +1,127 @@
 /**
  * Main navigation configuration
  */
-import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Import screens
-import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ChatScreen from '../screens/ChatScreen';
 import DataConnectionScreen from '../screens/DataConnectionScreen';
 import InsightsDashboardScreen from '../screens/InsightsDashboardScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 
-// Import theme
 import theme from '../theme';
+import { getData } from '../utils/storage';
 
-// Create navigators
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 /**
+ * Common navigation options for stack screens
+ */
+const screenOptions = {
+  headerStyle: {
+    backgroundColor: theme.colors.background.primary,
+    elevation: 0,
+    shadowOpacity: 0,
+    borderBottomWidth: 0,
+  },
+  headerTintColor: theme.colors.text.primary,
+  headerTitleStyle: {
+    ...theme.typography.styles.h4,
+    fontFamily: theme.typography.fonts.primary.medium,
+  },
+  headerBackTitleVisible: false,
+  cardStyle: {
+    backgroundColor: 'transparent',
+  },
+};
+
+/**
  * Main tab navigator displayed after onboarding
  */
-const TabNavigator = () => {
+const MainNavigator = () => {
   return (
     <Tab.Navigator
-      screenOptions={{
+      initialRouteName="Home"
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Chat') {
+            iconName = focused ? 'chatbubble' : 'chatbubble-outline';
+          } else if (route.name === 'DataConnection') {
+            iconName = focused ? 'cloud-upload' : 'cloud-upload-outline';
+          } else if (route.name === 'Insights') {
+            iconName = focused ? 'analytics' : 'analytics-outline';
+          } else if (route.name === 'Settings') {
+            iconName = focused ? 'settings' : 'settings-outline';
+          }
+          
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
         headerShown: false,
         tabBarActiveTintColor: theme.colors.accent.primary,
         tabBarInactiveTintColor: theme.colors.text.tertiary,
-        tabBarShowLabel: true,
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
-          <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark" />
+          <BlurView 
+            intensity={30} 
+            tint="dark" 
+            style={StyleSheet.absoluteFill}
+          />
         ),
-        tabBarLabelStyle: styles.tabBarLabel,
-      }}
+        tabBarItemStyle: {
+          paddingVertical: 6,
+        },
+        tabBarLabelStyle: {
+          ...theme.typography.styles.caption,
+          marginBottom: 4,
+        },
+      })}
     >
-      <Tab.Screen
-        name="Home"
+      <Tab.Screen 
+        name="Home" 
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" color={color} size={size} />
-          ),
+          tabBarLabel: 'Home',
         }}
       />
-      <Tab.Screen
-        name="Chat"
+      <Tab.Screen 
+        name="Chat" 
         component={ChatScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses" color={color} size={size} />
-          ),
+          tabBarLabel: 'Chat',
         }}
       />
-      <Tab.Screen
-        name="Data"
+      <Tab.Screen 
+        name="DataConnection" 
         component={DataConnectionScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cloud-upload" color={color} size={size} />
-          ),
+          tabBarLabel: 'Data',
         }}
       />
-      <Tab.Screen
-        name="Insights"
+      <Tab.Screen 
+        name="Insights" 
         component={InsightsDashboardScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sparkles" color={color} size={size} />
-          ),
+          tabBarLabel: 'Insights',
         }}
       />
-      <Tab.Screen
-        name="Settings"
+      <Tab.Screen 
+        name="Settings" 
         component={SettingsScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" color={color} size={size} />
-          ),
+          tabBarLabel: 'Settings',
         }}
       />
     </Tab.Navigator>
@@ -98,44 +135,37 @@ const TabNavigator = () => {
  * @returns {React.ReactElement} - Rendered navigator
  */
 const AppNavigator = ({ isFirstLaunch }) => {
-  // Define our navigation structure
+  const [initialRoute, setInitialRoute] = useState(
+    isFirstLaunch ? 'Onboarding' : 'Main'
+  );
+  
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        cardStyle: { backgroundColor: 'transparent' },
-        // Fade transition for screens
-        cardStyleInterpolator: ({ current }) => ({
-          cardStyle: {
-            opacity: current.progress,
-          },
-        }),
-      }}
-    >
-      {isFirstLaunch ? (
-        // Show onboarding flow for first launch
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName={initialRoute}
+        screenOptions={{
+          ...screenOptions,
+          headerShown: false,
+          presentation: 'transparentModal',
+        }}
+      >
+        {/* Onboarding */}
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      ) : (
-        // Show main app screens
-        <Stack.Screen name="Main" component={TabNavigator} />
-      )}
-    </Stack.Navigator>
+        
+        {/* Main app */}
+        <Stack.Screen name="Main" component={MainNavigator} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    height: theme.heights.tabBar,
-    borderTopWidth: 0,
-    elevation: 0,
     backgroundColor: 'transparent',
-    paddingBottom: 20, // Extra padding at bottom
-  },
-  tabBarLabel: {
-    fontFamily: theme.typography.fonts.primary.medium,
-    fontSize: 12,
-    letterSpacing: theme.typography.letterSpacing.wide,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    height: 60,
+    elevation: 0,
   },
 });
 
