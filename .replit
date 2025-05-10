@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["wget"]
 
 [workflows]
-runButton = "Project"
+runButton = "ExpoStart"
 
 [[workflows.workflow]]
 name = "Project"
@@ -62,6 +62,15 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node start-expo.js"
+
+[[workflows.workflow]]
+name = "ExpoStart"
+author = 41029417
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx expo start --web --port 5000"
 
 [deployment]
 run = ["sh", "-c", "npx expo start --web --port 5000 --no-dev"]
