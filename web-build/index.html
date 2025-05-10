@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voa - Your Personal AI Companion</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(to bottom, #0B0B23, #151540);
+      color: #F8E9B4;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      width: 90%;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    
+    .title {
+      font-size: 3rem;
+      color: #A894FF;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      font-size: 1.3rem;
+      color: #EFD9D1;
+      margin-bottom: 2rem;
+    }
+    
+    .orb {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #A894FF, #8F7BEE);
+      margin: 3rem auto;
+      position: relative;
+      box-shadow: 0 0 60px rgba(168, 148, 255, 0.5);
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    .orb::before {
+      content: '';
+      position: absolute;
+      top: 20%;
+      left: 20%;
+      width: 30%;
+      height: 30%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .features {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin: 2rem 0;
+      text-align: left;
+    }
+    
+    @media (min-width: 768px) {
+      .features {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    .feature {
+      background: rgba(100, 100, 255, 0.05);
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .feature h3 {
+      color: #A894FF;
+      margin-top: 0;
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">Voa</h1>
+    <p class="subtitle">Your private, personal AI companion</p>
+    
+    <div class="orb"></div>
+    
+    <div class="card">
+      <h2>Project Progress</h2>
+      <p>We are building a futuristic, intuitive mobile AI companion with React Native that helps users gather, store, and reflect on personal data with a modern, dreamlike interface.</p>
+    </div>
+    
+    <div class="features">
+      <div class="feature">
+        <h3>Core Components</h3>
+        <p>✓ AnimatedOrb component<br>
+           ✓ GlassmorphicCard with blur effects<br>
+           ✓ GradientBackground<br>
+           ✓ Navigation system</p>
+      </div>
+      <div class="feature">
+        <h3>Theme System</h3>
+        <p>✓ Color palette with deep indigo, soft violet<br>
+           ✓ Typography with Space Grotesk and IBM Plex Mono<br>
+           ✓ Animation utilities</p>
+      </div>
+      <div class="feature">
+        <h3>User Experience</h3>
+        <p>✓ Onboarding flow design<br>
+           ✓ Tab-based navigation<br>
+           ✓ Storage utilities</p>
+      </div>
+      <div class="feature">
+        <h3>Screens</h3>
+        <p>→ HomeScreen<br>
+           → ChatScreen<br>
+           → DataConnectionScreen<br>
+           → Settings</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
