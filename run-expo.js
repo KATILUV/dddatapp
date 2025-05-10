@@ -1,10 +1,22 @@
 const express = require('express');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const app = express();
+
+// Global variable to store the Expo URL
+let expoUrl = '';
+let expoUrlLastUpdated = null;
+let expoStatus = 'Starting...';
 
 // Serve static content
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Create a directory for temporary files if it doesn't exist
+const tmpDir = path.join(__dirname, 'tmp');
+if (!fs.existsSync(tmpDir)) {
+  fs.mkdirSync(tmpDir);
+}
 
 // Create a route that displays the QR code and instructions
 app.get('/', (req, res) => {
