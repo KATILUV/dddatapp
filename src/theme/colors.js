@@ -5,24 +5,24 @@
 
 const colors = {
   background: {
-    primary: '#0B0B23',     // Deep indigo
-    secondary: '#151540',   // Slightly lighter indigo
-    tertiary: '#1C1C50',    // Medium indigo for cards
-    overlay: 'rgba(11, 11, 35, 0.85)',
-    glass: 'rgba(100, 100, 255, 0.1)',
+    primary: '#090914',     // Almost black
+    secondary: '#12121E',   // Very dark indigo
+    tertiary: '#1A1A28',    // Dark indigo for cards
+    overlay: 'rgba(9, 9, 20, 0.95)',
+    glass: 'rgba(115, 83, 186, 0.08)',
   },
   accent: {
-    primary: '#A894FF',     // Soft violet
-    secondary: '#8F7BEE',   // Darker violet
-    tertiary: '#B9A5FF',    // Lighter violet
-    glow: 'rgba(168, 148, 255, 0.6)',
+    primary: '#7353BA',     // Soft purple
+    secondary: '#5A4290',   // Darker purple
+    tertiary: '#8E70D8',    // Lighter purple
+    glow: 'rgba(115, 83, 186, 0.5)',
   },
   text: {
-    primary: '#F8E9B4',     // Pale gold
-    secondary: '#EFD9D1',   // Blush beige
-    tertiary: '#D2D2EF',    // Light lavender
-    disabled: '#9090A0',    // Muted lavender
-    inverse: '#0B0B23',     // For text on light backgrounds
+    primary: '#E6CDAA',     // Soft gold
+    secondary: '#D9D9D9',   // Light gray
+    tertiary: '#A1A1B5',    // Muted lavender
+    disabled: '#686880',    // Muted gray
+    inverse: '#090914',     // For text on light backgrounds
   },
   success: {
     default: '#7ED9B7',     // Teal
@@ -45,11 +45,11 @@ const colors = {
     dark: '#4FB5CC',
   },
   gradients: {
-    primary: ['#8F7BEE', '#A894FF'],
-    secondary: ['#0B0B23', '#151540'],
-    card: ['rgba(100, 100, 255, 0.15)', 'rgba(100, 100, 255, 0.05)'],
-    accent: ['#B9A5FF', '#8F7BEE'],
-    chrome: ['#E2E2E5', '#D1D1D8'],
+    primary: ['#5A4290', '#7353BA'],
+    secondary: ['#090914', '#12121E'],
+    card: ['rgba(115, 83, 186, 0.08)', 'rgba(115, 83, 186, 0.04)'],
+    accent: ['#8E70D8', '#5A4290'],
+    chrome: ['#D9D9D9', '#A1A1B5'],
   },
   shadows: {
     light: 'rgba(168, 148, 255, 0.2)',
