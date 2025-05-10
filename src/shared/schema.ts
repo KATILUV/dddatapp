@@ -1,29 +1,31 @@
 import {
   pgTable,
+  serial,
   text,
   varchar,
-  timestamp,
-  jsonb,
-  integer,
   boolean,
-  serial,
+  timestamp,
+  integer,
+  json,
+  primaryKey,
   index,
-  uniqueIndex
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-// Session storage table for Replit Auth
+// Session storage table for authentication
 export const sessions = pgTable(
   "sessions",
   {
     sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
+    sess: json("sess").notNull(),
     expire: timestamp("expire").notNull(),
   },
-  (table) => [index("IDX_session_expire").on(table.expire)],
+  (table) => [
+    index("IDX_session_expire").on(table.expire),
+  ]
 );
 
-// User storage table
+// Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email").unique(),
@@ -34,13 +36,16 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User preferences
+// User preferences table
 export const userPreferences = pgTable("user_preferences", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  privacyLevel: varchar("privacy_level").notNull().default("maximum"), // maximum, balanced, enhanced
-  analysisFrequency: varchar("analysis_frequency").notNull().default("weekly"), // daily, weekly, monthly
-  notificationLevel: varchar("notification_level").notNull().default("moderate"), // minimal, moderate, frequent  
+  theme: varchar("theme").default("dark"),
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  dataRetentionPeriod: integer("data_retention_period").default(90), // days
+  privacySettings: json("privacy_settings"),
+  servicePreferences: json("service_preferences"), // Which services to analyze, what data to show
+  insightFrequency: varchar("insight_frequency").default("daily"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -49,18 +54,18 @@ export const userPreferences = pgTable("user_preferences", {
 export const dataSources = pgTable("data_sources", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  sourceType: varchar("source_type").notNull(), // google, twitter, instagram, spotify, etc.
-  sourceId: varchar("source_id").notNull(), // unique identifier for this source
-  displayName: varchar("display_name").notNull(), // user-friendly name
-  connected: boolean("connected").notNull().default(false), // whether currently connected
-  lastSynced: timestamp("last_synced"), // when data was last imported
+  sourceType: varchar("source_type").notNull(), // google, twitter, spotify, etc.
+  sourceId: varchar("source_id").notNull(), // ID from the source service
+  displayName: varchar("display_name").notNull(),
+  description: text("description"),
+  connected: boolean("connected").default(false),
+  lastSynced: timestamp("last_synced"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
-    userSourceIdx: index("user_source_idx").on(table.userId, table.sourceType),
-    uniqueSource: uniqueIndex("unique_source_idx").on(table.userId, table.sourceId)
-  }
+    userIdSourceTypeIdx: index("user_id_source_type_idx").on(table.userId, table.sourceType),
+  };
 });
 
 // OAuth tokens table
@@ -69,61 +74,67 @@ export const oauthTokens = pgTable("oauth_tokens", {
   dataSourceId: integer("data_source_id").notNull().references(() => dataSources.id, { onDelete: "cascade" }),
   accessToken: text("access_token").notNull(),
   refreshToken: text("refresh_token"),
-  tokenType: varchar("token_type").notNull().default("Bearer"),
+  tokenType: varchar("token_type").default("Bearer"),
   scope: text("scope"),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Insights table
+// User insights table
 export const insights = pgTable("insights", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: varchar("title").notNull(),
-  description: text("description").notNull(),
-  category: varchar("category").notNull(), // wellness, preferences, communication, etc.
-  insightData: jsonb("insight_data"), // JSON data for visualization
-  sourceIds: integer("source_ids").array(), // Array of data source IDs
+  description: text("description"),
+  type: varchar("type").notNull(), // behavioral, creative, emotional, etc.
+  data: json("data").notNull(), // Specific data for the insight type
+  sources: json("sources"), // Which data sources contributed to this insight
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
-    userInsightsIdx: index("user_insights_idx").on(table.userId),
-    categoryIdx: index("category_idx").on(table.category),
-  }
+    userIdTypeIdx: index("user_id_type_idx").on(table.userId, table.type),
+  };
 });
 
 // Define relations
-export const userRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many }) => ({
   preferences: many(userPreferences),
   dataSources: many(dataSources),
   insights: many(insights),
 }));
 
-export const dataSourceRelations = relations(dataSources, ({ one, many }) => ({
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const dataSourcesRelations = relations(dataSources, ({ one, many }) => ({
   user: one(users, {
     fields: [dataSources.userId],
     references: [users.id],
   }),
-  tokens: many(oauthTokens),
+  oauthTokens: many(oauthTokens),
 }));
 
-export const oauthTokenRelations = relations(oauthTokens, ({ one }) => ({
+export const oauthTokensRelations = relations(oauthTokens, ({ one }) => ({
   dataSource: one(dataSources, {
     fields: [oauthTokens.dataSourceId],
     references: [dataSources.id],
   }),
 }));
 
-export const insightRelations = relations(insights, ({ one }) => ({
+export const insightsRelations = relations(insights, ({ one }) => ({
   user: one(users, {
     fields: [insights.userId],
     references: [users.id],
   }),
 }));
 
-// Types
+// Type definitions
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
 
