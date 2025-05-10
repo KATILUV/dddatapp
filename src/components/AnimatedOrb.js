@@ -29,9 +29,9 @@ const AnimatedOrb = ({
 }) => {
   // Size presets
   const sizeMap = {
-    small: 50,
-    medium: 100,
-    large: 200,
+    small: 40,
+    medium: 80,
+    large: 160,
   };
   
   const orbSize = sizeMap[size] || sizeMap.medium;

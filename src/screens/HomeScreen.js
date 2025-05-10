@@ -19,6 +19,7 @@ import GradientBackground from '../components/GradientBackground';
 import GlassmorphicCard from '../components/GlassmorphicCard';
 import AnimatedOrb from '../components/AnimatedOrb';
 import Button from '../components/Button';
+import DataChart from '../components/DataChart';
 import { getData } from '../utils/storage';
 import { fadeInUp, fadeIn } from '../utils/animations';
 import theme from '../theme';
@@ -231,31 +232,32 @@ const HomeScreen = ({ navigation }) => {
         
         {/* Data Categories (from reference) */}
         <Animated.View style={[styles.dataCategories, actionsAnim]}>
-          <View style={styles.dataCategoryItem}>
-            <Ionicons name="time-outline" size={22} color={theme.colors.accent.primary} />
-            <Text style={styles.dataCategoryText}>Sites you visit</Text>
-          </View>
-          
-          <View style={styles.dataCategoryItem}>
-            <Ionicons name="chatbubble-outline" size={22} color={theme.colors.accent.primary} />
-            <Text style={styles.dataCategoryText}>Topics you care about</Text>
-          </View>
-          
-          <View style={styles.dataCategoryItem}>
-            <Ionicons name="people-outline" size={22} color={theme.colors.accent.primary} />
-            <Text style={styles.dataCategoryText}>Social connections</Text>
-          </View>
-          
-          {/* Simple graphic representation */}
-          <View style={styles.graphContainer}>
-            <View style={styles.graph}>
-              <View style={[styles.graphDot, {left: '20%'}]} />
-              <View style={[styles.graphDot, {left: '40%'}]} />
-              <View style={[styles.graphDot, {left: '60%'}]} />
-              <View style={[styles.graphDot, {left: '80%'}]} />
-              <View style={styles.graphLine} />
+          <GlassmorphicCard style={styles.dataCategoryCard} useBorder={false}>
+            <View style={styles.dataCategoryContent}>
+              <View style={styles.dataCategoryItem}>
+                <Ionicons name="time-outline" size={22} color={theme.colors.accent.primary} />
+                <Text style={styles.dataCategoryText}>Sites you visit</Text>
+              </View>
+              
+              <View style={styles.dataCategoryItem}>
+                <Ionicons name="chatbubble-outline" size={22} color={theme.colors.accent.primary} />
+                <Text style={styles.dataCategoryText}>Topics you care about</Text>
+              </View>
+              
+              <View style={styles.dataCategoryItem}>
+                <Ionicons name="people-outline" size={22} color={theme.colors.accent.primary} />
+                <Text style={styles.dataCategoryText}>Social connections</Text>
+              </View>
+              
+              {/* Data chart visualization */}
+              <View style={styles.graphContainer}>
+                <DataChart 
+                  dataPoints={[0.2, 0.6, 0.4, 0.8, 0.5, 0.9]}
+                  style={styles.chart}
+                />
+              </View>
             </View>
-          </View>
+          </GlassmorphicCard>
         </Animated.View>
       </ScrollView>
     </GradientBackground>
@@ -272,12 +274,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: theme.spacing.md,
   },
   appName: {
     ...theme.typography.styles.h4,
     color: theme.colors.text.secondary,
-    letterSpacing: theme.typography.letterSpacing.extraWide,
+    letterSpacing: 2,
     fontFamily: theme.typography.fonts.primary.medium,
+    fontSize: 16,
   },
   headerOrb: {
     width: 40,
@@ -406,9 +410,12 @@ const styles = StyleSheet.create({
   dataCategories: {
     marginTop: theme.spacing.xxl,
     marginBottom: theme.spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: theme.spacing.xl,
+  },
+  dataCategoryCard: {
+    padding: 0,
+  },
+  dataCategoryContent: {
+    padding: theme.spacing.lg,
   },
   dataCategoryItem: {
     flexDirection: 'row',
@@ -424,29 +431,9 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xl,
     paddingTop: theme.spacing.md,
     width: '100%',
+  },
+  chart: {
     height: 80,
-  },
-  graph: {
-    position: 'relative',
-    width: '100%',
-    height: 40,
-  },
-  graphDot: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.accent.primary,
-    top: 16,
-    zIndex: 2,
-  },
-  graphLine: {
-    position: 'absolute',
-    width: '100%',
-    height: 2,
-    backgroundColor: 'rgba(115, 83, 186, 0.3)',
-    top: 20,
-    borderRadius: 1,
   },
 });
 
