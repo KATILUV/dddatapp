@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Keyboard,
   Animated,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -22,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import GradientBackground from '../components/GradientBackground';
 import MessageBubble from '../components/MessageBubble';
 import { getData, storeMessages } from '../utils/storage';
+import openaiService from '../services/openai';
 import theme from '../theme';
 import { fadeIn } from '../utils/animations';
 
@@ -115,44 +117,89 @@ const ChatScreen = () => {
   };
   
   const respondToMessage = async (userText, currentMessages) => {
-    // Generate response based on user input
-    // This is just a placeholder - in a real app, this would call an API
-    
-    let responseText = '';
-    const lowerText = userText.toLowerCase();
-    
-    if (lowerText.includes('hello') || lowerText.includes('hi')) {
-      responseText = `Hello${userData?.name ? ` ${userData.name}` : ''}! How can I help you today?`;
-    } else if (lowerText.includes('data') || lowerText.includes('upload')) {
-      responseText = "You can upload your data from the Data Connection screen. I can analyze various sources like social media exports, notes, journals, and more.";
-    } else if (lowerText.includes('insight') || lowerText.includes('analyze')) {
-      responseText = "I can generate insights about your digital behavior, content preferences, and personal patterns. The more data you provide, the more personalized insights I can offer.";
-    } else if (lowerText.includes('help') || lowerText.includes('how')) {
-      responseText = "I'm here to help you understand your digital presence. You can ask me questions about your data, request specific analyses, or explore insights I've already generated.";
-    } else {
-      responseText = "That's an interesting point. As we collect more of your data, I'll be able to provide more personalized responses and insights.";
+    try {
+      // Prepare conversation context by formatting messages for OpenAI API
+      // We'll take the last few messages for context
+      const recentMessages = currentMessages.slice(-5).map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+      
+      // Add system message at the beginning for context
+      const messages = [
+        {
+          role: 'system',
+          content: `You are Voa, a personal AI assistant focused on helping users analyze their personal data to gain insights 
+          about themselves. Your tone should be ${userData?.tone || 'balanced'}, professional, and focused on data analysis. 
+          The user's name is ${userData?.name || 'the user'}. 
+          Focus on helping the user understand patterns in their data, digital behavior, and personal insights.`
+        },
+        ...recentMessages
+      ];
+      
+      let responseText = '';
+      
+      try {
+        // Check if OpenAI API key is available
+        if (!process.env.OPENAI_API_KEY) {
+          throw new Error('API key not available');
+        }
+        
+        // Get response from OpenAI
+        const response = await openaiService.getChatCompletion(messages);
+        responseText = response.choices[0].message.content;
+      } catch (error) {
+        console.error('Error calling OpenAI:', error);
+        
+        // Fallback responses if API call fails
+        const lowerText = userText.toLowerCase();
+        
+        if (lowerText.includes('hello') || lowerText.includes('hi')) {
+          responseText = `Hello${userData?.name ? ` ${userData.name}` : ''}! How can I help you today?`;
+        } else if (lowerText.includes('data') || lowerText.includes('upload')) {
+          responseText = "You can upload your data from the Data Connection screen. I can analyze various sources like social media exports, notes, journals, and more.";
+        } else if (lowerText.includes('insight') || lowerText.includes('analyze')) {
+          responseText = "I can generate insights about your digital behavior, content preferences, and personal patterns. The more data you provide, the more personalized insights I can offer.";
+        } else if (lowerText.includes('help') || lowerText.includes('how')) {
+          responseText = "I'm here to help you understand your digital presence. You can ask me questions about your data, request specific analyses, or explore insights I've already generated.";
+        } else {
+          responseText = "I'm having trouble connecting to my knowledge base. Please check your internet connection or API configuration.";
+        }
+        
+        // Alert the user if API key is missing
+        if (error.message === 'API key not available') {
+          Alert.alert(
+            "OpenAI API Key Missing",
+            "Please add your OpenAI API key in the app settings to enable AI responses.",
+            [{ text: "OK" }]
+          );
+        }
+      }
+      
+      // Create AI response
+      const aiMessage = {
+        id: `ai-${Date.now()}`,
+        text: responseText,
+        sender: 'ai',
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Add AI message to state
+      const updatedMessages = [...currentMessages, aiMessage];
+      setMessages(updatedMessages);
+      setIsTyping(false);
+      
+      // Scroll to bottom
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+      
+      // Save messages
+      await storeMessages(updatedMessages);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      setIsTyping(false);
     }
-    
-    // Create AI response
-    const aiMessage = {
-      id: `ai-${Date.now()}`,
-      text: responseText,
-      sender: 'ai',
-      timestamp: new Date().toISOString(),
-    };
-    
-    // Add AI message to state
-    const updatedMessages = [...currentMessages, aiMessage];
-    setMessages(updatedMessages);
-    setIsTyping(false);
-    
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-    
-    // Save messages
-    await storeMessages(updatedMessages);
   };
   
   const renderMessage = ({ item }) => {
