@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import GradientBackground from '../components/GradientBackground';
 import GlassmorphicCard from '../components/GlassmorphicCard';
 import Button from '../components/Button';
+import DataConnectionVisualizer from '../components/DataConnectionVisualizer';
 import theme from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -297,6 +298,13 @@ const DataConnectionScreen = ({ navigation }) => {
             </Text>
           </View>
           
+          {/* Visualizer */}
+          <DataConnectionVisualizer 
+            dataSources={connectedSources}
+            insights={[]} // We'll implement insights fetching later
+            style={styles.visualizer}
+          />
+          
           {connectedSources.length > 0 ? (
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Connected Sources</Text>
@@ -333,6 +341,9 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xxxl,
+  },
+  visualizer: {
+    marginVertical: theme.spacing.lg,
   },
   header: {
     marginBottom: theme.spacing.xl,
