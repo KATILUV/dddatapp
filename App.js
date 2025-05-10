@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useFonts } from 'expo-font';
 import AppLoading from 'expo-app-loading';
 import { ThemeProvider } from 'styled-components/native';
@@ -10,9 +11,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import theme from './src/theme';
 import AppNavigator from './src/navigation/AppNavigator';
 import GradientBackground from './src/components/GradientBackground';
+import AnimatedOrb from './src/components/AnimatedOrb';
+import { getData, storeData } from './src/utils/storage';
 
 export default function App() {
   const [isFirstLaunch, setIsFirstLaunch] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Load custom fonts
   const [fontsLoaded] = useFonts({
@@ -24,28 +28,51 @@ export default function App() {
   });
 
   useEffect(() => {
-    // Check if it's the first launch
+    // Check if it's the first launch using our util function
     async function checkFirstLaunch() {
       try {
-        const value = await AsyncStorage.getItem('alreadyLaunched');
-        if (value === null) {
-          await AsyncStorage.setItem('alreadyLaunched', 'true');
-          setIsFirstLaunch(true);
+        // Check if user data exists
+        const userData = await getData('userData');
+        if (!userData) {
+          // First launch check with traditional method as backup
+          const value = await AsyncStorage.getItem('alreadyLaunched');
+          if (value === null) {
+            await AsyncStorage.setItem('alreadyLaunched', 'true');
+            setIsFirstLaunch(true);
+          } else {
+            setIsFirstLaunch(false);
+          }
         } else {
           setIsFirstLaunch(false);
         }
+        setIsLoading(false);
       } catch (error) {
         console.error('Error checking first launch:', error);
         setIsFirstLaunch(false);
+        setIsLoading(false);
       }
     }
     
-    checkFirstLaunch();
-  }, []);
+    if (fontsLoaded) {
+      checkFirstLaunch();
+    }
+  }, [fontsLoaded]);
 
-  // Wait for fonts to load and first launch check to complete
-  if (!fontsLoaded || isFirstLaunch === null) {
+  // Wait for fonts to load
+  if (!fontsLoaded) {
     return <AppLoading />;
+  }
+
+  // Show loading screen while checking first launch
+  if (isLoading || isFirstLaunch === null) {
+    return (
+      <GradientBackground>
+        <View style={styles.loadingContainer}>
+          <AnimatedOrb size="medium" enhanced3d glow float />
+          <Text style={styles.loadingText}>Loading Voa</Text>
+        </View>
+      </GradientBackground>
+    );
   }
 
   return (
@@ -61,3 +88,17 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...theme.typography.styles.h3,
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.lg,
+    letterSpacing: theme.typography.letterSpacing.wide,
+  },
+});
