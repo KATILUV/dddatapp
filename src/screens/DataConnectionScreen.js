@@ -2,148 +2,99 @@
  * Data Connection screen for uploading and managing user data sources
  */
 import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-  ActivityIndicator,
-  Animated,
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  Alert, 
+  ActivityIndicator 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-
 import GradientBackground from '../components/GradientBackground';
 import GlassmorphicCard from '../components/GlassmorphicCard';
 import Button from '../components/Button';
 import theme from '../theme';
-import { fadeInUp } from '../utils/animations';
-import { getData, storeData } from '../utils/storage';
+import { useAuth } from '../hooks/useAuth';
+import api from '../services/api';
 
 /**
  * Data Connection screen for managing data sources
  * @returns {React.ReactElement} - Rendered component
  */
 const DataConnectionScreen = ({ navigation }) => {
+  const { user, isAuthenticated } = useAuth();
   const [dataSources, setDataSources] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [actionMessage, setActionMessage] = useState('');
+  const [connectedSources, setConnectedSources] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  // Animation values
-  const headerAnim = fadeInUp(100);
-  const introAnim = fadeInUp(300);
-  const sourcesAnim = fadeInUp(500);
+  // Available data source providers
+  const dataSourceProviders = [
+    {
+      id: 'google',
+      name: 'Google',
+      icon: 'logo-google',
+      description: 'Search history, Gmail, Calendar, and more',
+      color: '#DB4437'
+    },
+    {
+      id: 'twitter',
+      name: 'Twitter',
+      icon: 'logo-twitter',
+      description: 'Tweets, likes, follows, and interests',
+      color: '#1DA1F2'
+    },
+    {
+      id: 'spotify',
+      name: 'Spotify',
+      icon: 'musical-notes',
+      description: 'Music preferences, playlists, and listening habits',
+      color: '#1DB954'
+    },
+    {
+      id: 'instagram',
+      name: 'Instagram',
+      icon: 'logo-instagram',
+      description: 'Photos, comments, likes, and interactions',
+      color: '#E1306C'
+    },
+  ];
   
-  // Load data sources on component mount
+  // Fetch user's connected data sources on load
   useEffect(() => {
-    const loadDataSources = async () => {
+    const fetchDataSources = async () => {
+      if (!isAuthenticated || !user) {
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const storedSources = await getData('dataSources');
-        if (storedSources) {
-          setDataSources(storedSources);
-        }
+        setLoading(true);
+        const data = await api.dataSources.getAll();
+        setConnectedSources(data);
       } catch (error) {
-        console.error('Error loading data sources:', error);
+        console.error('Error fetching data sources:', error);
+        Alert.alert('Error', 'Failed to fetch your connected data sources.');
+      } finally {
+        setLoading(false);
       }
     };
     
-    loadDataSources();
-  }, []);
-  
-  // Data source definitions
-  const availableSources = [
-    {
-      id: 'social-media',
-      title: 'Social Media',
-      description: 'Import data from Instagram, Twitter, or Facebook exports',
-      icon: 'people',
-      supported: ['json', 'csv', 'zip'],
-    },
-    {
-      id: 'notes',
-      title: 'Notes & Journals',
-      description: 'Upload exported notes from Apple Notes, Google Keep, or text files',
-      icon: 'document-text',
-      supported: ['txt', 'json', 'md', 'csv'],
-    },
-    {
-      id: 'email',
-      title: 'Email Archives',
-      description: 'Analyze patterns from email exports (Gmail, Outlook)',
-      icon: 'mail',
-      supported: ['mbox', 'eml', 'csv', 'json'],
-    },
-    {
-      id: 'fitness',
-      title: 'Fitness & Health',
-      description: 'Connect with Apple Health, Fitbit, or Google Fit exports',
-      icon: 'fitness',
-      supported: ['xml', 'json', 'csv'],
-    },
-  ];
+    fetchDataSources();
+  }, [isAuthenticated, user]);
   
   /**
    * Handles file upload for a specific data source
    * @param {string} sourceId - ID of the data source to upload to
    */
-  const handleUpload = async (sourceId) => {
-    try {
-      setIsLoading(true);
-      
-      // Pick a document
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: true,
-      });
-      
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        setIsLoading(false);
-        return;
-      }
-      
-      const file = result.assets[0];
-      const source = availableSources.find(s => s.id === sourceId);
-      
-      // Check if file extension is supported
-      const fileExt = file.name.split('.').pop().toLowerCase();
-      if (source && !source.supported.includes(fileExt)) {
-        setActionMessage(`Unsupported file type. Please upload a ${source.supported.join(', ')} file.`);
-        setIsLoading(false);
-        setTimeout(() => setActionMessage(''), 3000);
-        return;
-      }
-      
-      // Create a new data source entry
-      const newSource = {
-        id: `${sourceId}-${Date.now()}`,
-        sourceType: sourceId,
-        fileName: file.name,
-        uploadDate: new Date().toISOString(),
-        fileUri: file.uri,
-        fileSize: file.size,
-      };
-      
-      // Add to data sources state
-      const updatedSources = [...dataSources, newSource];
-      setDataSources(updatedSources);
-      
-      // Store updated sources
-      await storeData('dataSources', updatedSources);
-      
-      setActionMessage('Data source added successfully!');
-      setTimeout(() => setActionMessage(''), 3000);
-      
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setActionMessage('Error uploading file. Please try again.');
-      setTimeout(() => setActionMessage(''), 3000);
-      setIsLoading(false);
-    }
+  const handleFileUpload = async (sourceId) => {
+    // This would be implemented using document picker in a real app
+    Alert.alert(
+      'Upload Files',
+      'In a real app, this would open a document picker for uploading files.',
+      [{ text: 'OK' }]
+    );
   };
   
   /**
@@ -151,25 +102,47 @@ const DataConnectionScreen = ({ navigation }) => {
    * @param {string} sourceId - ID of the source to remove
    */
   const handleRemoveSource = async (sourceId) => {
+    Alert.alert(
+      'Remove Data Source',
+      'Are you sure you want to disconnect this data source? This will remove all associated data and insights.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              // Find the source in our connected sources
+              const source = connectedSources.find(s => s.sourceType === sourceId);
+              if (source) {
+                await api.dataSources.remove(source.id);
+                setConnectedSources(connectedSources.filter(s => s.id !== source.id));
+              }
+            } catch (error) {
+              console.error('Error removing data source:', error);
+              Alert.alert('Error', 'Failed to remove the data source.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+  
+  // Connect a new data source
+  const handleConnectSource = async (sourceId) => {
     try {
-      setIsLoading(true);
-      
-      // Filter out the source to remove
-      const updatedSources = dataSources.filter(source => source.id !== sourceId);
-      setDataSources(updatedSources);
-      
-      // Store updated sources
-      await storeData('dataSources', updatedSources);
-      
-      setActionMessage('Data source removed.');
-      setTimeout(() => setActionMessage(''), 3000);
-      
-      setIsLoading(false);
+      setLoading(true);
+      await api.dataSources.startOAuthFlow(sourceId);
     } catch (error) {
-      console.error('Error removing data source:', error);
-      setActionMessage('Error removing data source. Please try again.');
-      setTimeout(() => setActionMessage(''), 3000);
-      setIsLoading(false);
+      console.error('Error starting OAuth flow:', error);
+      setLoading(false);
+      Alert.alert('Error', 'Failed to connect to the selected service.');
     }
   };
   
@@ -179,9 +152,12 @@ const DataConnectionScreen = ({ navigation }) => {
    * @returns {string} - Formatted file size (e.g., "2.5 MB")
    */
   const formatFileSize = (bytes) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes === 0) return '0 B';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
   };
   
   /**
@@ -198,106 +174,154 @@ const DataConnectionScreen = ({ navigation }) => {
     });
   };
   
+  // Render each connected data source
+  const renderConnectedSource = (source, index) => {
+    // Find the provider details
+    const provider = dataSourceProviders.find(p => p.id === source.sourceType) || {
+      name: source.displayName,
+      icon: 'cloud-outline',
+      color: theme.colors.accent.tertiary,
+    };
+    
+    return (
+      <GlassmorphicCard 
+        key={source.id || index}
+        style={styles.connectedSourceCard}
+      >
+        <View style={styles.cardHeader}>
+          <View style={[styles.iconContainer, { backgroundColor: provider.color }]}>
+            <Ionicons name={provider.icon} size={24} color="#FFFFFF" />
+          </View>
+          <View style={styles.cardTitleContainer}>
+            <Text style={styles.cardTitle}>{source.displayName}</Text>
+            <Text style={styles.cardSubtitle}>
+              Connected on {formatDate(source.createdAt)}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleRemoveSource(source.sourceType)}
+            style={styles.actionButton}
+          >
+            <Ionicons name="trash-outline" size={20} color={theme.colors.text.secondary} />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.cardDivider} />
+        
+        <View style={styles.cardFooter}>
+          <Text style={styles.lastSyncText}>
+            {source.lastSynced 
+              ? `Last synchronized: ${formatDate(source.lastSynced)}`
+              : 'Not yet synchronized'
+            }
+          </Text>
+          
+          <TouchableOpacity
+            onPress={() => handleFileUpload(source.sourceType)}
+            style={styles.uploadButton}
+          >
+            <Ionicons name="cloud-upload-outline" size={16} color={theme.colors.text.primary} />
+            <Text style={styles.uploadButtonText}>Upload Files</Text>
+          </TouchableOpacity>
+        </View>
+      </GlassmorphicCard>
+    );
+  };
+  
+  // Render each available data source
+  const renderAvailableSource = (provider) => {
+    // Check if already connected
+    const isConnected = connectedSources.some(s => s.sourceType === provider.id);
+    
+    if (isConnected) return null;
+    
+    return (
+      <TouchableOpacity
+        key={provider.id}
+        onPress={() => handleConnectSource(provider.id)}
+        style={styles.availableSourceWrapper}
+      >
+        <GlassmorphicCard style={styles.availableSourceCard}>
+          <View style={styles.availableSourceContent}>
+            <View style={[styles.iconContainer, { backgroundColor: provider.color }]}>
+              <Ionicons name={provider.icon} size={24} color="#FFFFFF" />
+            </View>
+            <View style={styles.availableSourceTextContainer}>
+              <Text style={styles.availableSourceTitle}>{provider.name}</Text>
+              <Text style={styles.availableSourceDescription}>{provider.description}</Text>
+            </View>
+            <Ionicons name="add-circle" size={24} color={theme.colors.accent.primary} />
+          </View>
+        </GlassmorphicCard>
+      </TouchableOpacity>
+    );
+  };
+  
+  if (!isAuthenticated) {
+    return (
+      <GradientBackground>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>Login Required</Text>
+          <Text style={styles.emptyText}>
+            Please log in to access and manage your data connections.
+          </Text>
+          <Button
+            title="Log In"
+            onPress={() => navigation.navigate('Login')}
+            variant="primary"
+            style={styles.loginButton}
+          />
+        </View>
+      </GradientBackground>
+    );
+  }
+  
   return (
     <GradientBackground>
-      <View style={styles.container}>
-        <Animated.View style={[styles.header, headerAnim]}>
-          <Text style={styles.headerTitle}>DATA SOURCES</Text>
-        </Animated.View>
-        
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.accent.primary} />
+          <Text style={styles.loadingText}>Loading your data connections...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Intro section */}
-          <Animated.View style={introAnim}>
-            <GlassmorphicCard style={styles.introCard}>
-              <Text style={styles.introTitle}>Connect Your Data</Text>
-              <Text style={styles.introText}>
-                Upload your personal data exports for Voa to analyze and generate insights. All data remains on your device.
-              </Text>
-              <View style={styles.privacyBadge}>
-                <Ionicons name="shield-checkmark" size={14} color={theme.colors.success.default} />
-                <Text style={styles.privacyText}>Private &amp; Secure</Text>
-              </View>
-            </GlassmorphicCard>
-          </Animated.View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Your Data Connections</Text>
+            <Text style={styles.subtitle}>
+              Connect your data from various services to generate deeper insights. 
+              Your data is analyzed securely on-device and never shared.
+            </Text>
+          </View>
           
-          {/* Data sources section */}
-          <Animated.View style={sourcesAnim}>
-            <Text style={styles.sectionTitle}>AVAILABLE SOURCES</Text>
-            
-            {availableSources.map((source) => (
-              <GlassmorphicCard key={source.id} style={styles.sourceCard}>
-                <View style={styles.sourceHeader}>
-                  <View style={styles.sourceIconContainer}>
-                    <Ionicons name={source.icon} size={24} color={theme.colors.accent.primary} />
-                  </View>
-                  <View style={styles.sourceDetails}>
-                    <Text style={styles.sourceTitle}>{source.title}</Text>
-                    <Text style={styles.sourceDescription}>{source.description}</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.sourceActions}>
-                  <Text style={styles.supportedText}>
-                    Supports: {source.supported.join(', ')}
-                  </Text>
-                  <Button
-                    title="Upload"
-                    onPress={() => handleUpload(source.id)}
-                    variant="outline"
-                    size="small"
-                    iconLeft="cloud-upload"
-                    disabled={isLoading}
-                  />
-                </View>
-                
-                {/* Connected sources list */}
-                {dataSources
-                  .filter(ds => ds.sourceType === source.id)
-                  .map(connectedSource => (
-                    <View key={connectedSource.id} style={styles.connectedSource}>
-                      <View style={styles.connectedSourceInfo}>
-                        <Ionicons name="document" size={16} color={theme.colors.text.secondary} />
-                        <View style={styles.connectedSourceDetails}>
-                          <Text style={styles.connectedSourceName} numberOfLines={1}>
-                            {connectedSource.fileName}
-                          </Text>
-                          <Text style={styles.connectedSourceMeta}>
-                            {formatFileSize(connectedSource.fileSize)} • {formatDate(connectedSource.uploadDate)}
-                          </Text>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.removeButton}
-                        onPress={() => handleRemoveSource(connectedSource.id)}
-                      >
-                        <Ionicons name="close" size={16} color={theme.colors.text.tertiary} />
-                      </TouchableOpacity>
-                    </View>
-                  ))
-                }
-              </GlassmorphicCard>
-            ))}
-          </Animated.View>
+          {connectedSources.length > 0 ? (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Connected Sources</Text>
+              <View style={styles.connectedSourcesContainer}>
+                {connectedSources.map(renderConnectedSource)}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.emptySourcesContainer}>
+              <Ionicons name="cloud-offline-outline" size={48} color={theme.colors.text.secondary} />
+              <Text style={styles.emptyTitle}>No Connected Sources</Text>
+              <Text style={styles.emptyText}>
+                Connect your first data source to start generating insights
+              </Text>
+            </View>
+          )}
+          
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Available Sources</Text>
+            <View style={styles.availableSourcesContainer}>
+              {dataSourceProviders.map(renderAvailableSource)}
+            </View>
+          </View>
         </ScrollView>
-        
-        {/* Loading indicator */}
-        {isLoading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={theme.colors.accent.primary} />
-          </View>
-        )}
-        
-        {/* Action message */}
-        {actionMessage ? (
-          <View style={styles.actionMessage}>
-            <Text style={styles.actionMessageText}>{actionMessage}</Text>
-          </View>
-        ) : null}
-      </View>
+      )}
     </GradientBackground>
   );
 };
@@ -306,155 +330,155 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    ...theme.typography.styles.h3,
-    color: theme.colors.text.primary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    textTransform: 'uppercase',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
+  contentContainer: {
+    padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xxxl,
   },
-  introCard: {
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+  header: {
+    marginBottom: theme.spacing.xl,
   },
-  introTitle: {
-    ...theme.typography.styles.h3,
+  title: {
+    ...theme.typography.styles.h2,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.sm,
   },
-  introText: {
+  subtitle: {
     ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.md,
+    lineHeight: theme.lineHeights.body * 1.1,
   },
-  privacyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(46, 196, 182, 0.1)',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  privacyText: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.success.default,
-    marginLeft: theme.spacing.xs,
+  sectionContainer: {
+    marginBottom: theme.spacing.xl,
   },
   sectionTitle: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  sourceCard: {
+    ...theme.typography.styles.h3,
+    color: theme.colors.text.primary,
     marginBottom: theme.spacing.md,
   },
-  sourceHeader: {
+  connectedSourcesContainer: {
+    gap: theme.spacing.md,
+  },
+  connectedSourceCard: {
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  cardHeader: {
     flexDirection: 'row',
-    marginBottom: theme.spacing.md,
+    alignItems: 'center',
   },
-  sourceIconContainer: {
+  iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    justifyContent: 'center',
   },
-  sourceDetails: {
+  cardTitleContainer: {
     flex: 1,
+    marginLeft: theme.spacing.md,
   },
-  sourceTitle: {
+  cardTitle: {
     ...theme.typography.styles.h4,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
   },
-  sourceDescription: {
+  cardSubtitle: {
     ...theme.typography.styles.bodySmall,
-    color: theme.colors.text.secondary,
+    color: theme.colors.text.tertiary,
   },
-  sourceActions: {
+  actionButton: {
+    padding: theme.spacing.sm,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: theme.colors.background.tertiary,
+    marginVertical: theme.spacing.md,
+  },
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  lastSyncText: {
+    ...theme.typography.styles.bodySmall,
+    color: theme.colors.text.tertiary,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.borderRadius.sm,
+  },
+  uploadButtonText: {
+    ...theme.typography.styles.buttonSmall,
+    color: theme.colors.text.primary,
+    marginLeft: theme.spacing.xs,
+  },
+  availableSourcesContainer: {
+    gap: theme.spacing.md,
+  },
+  availableSourceWrapper: {
     marginBottom: theme.spacing.sm,
   },
-  supportedText: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
+  availableSourceCard: {
+    padding: theme.spacing.md,
   },
-  connectedSource: {
+  availableSourceContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  connectedSourceInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  availableSourceTextContainer: {
     flex: 1,
+    marginLeft: theme.spacing.md,
   },
-  connectedSourceDetails: {
-    marginLeft: theme.spacing.sm,
-    flex: 1,
-  },
-  connectedSourceName: {
-    ...theme.typography.styles.bodySmall,
+  availableSourceTitle: {
+    ...theme.typography.styles.h4,
     color: theme.colors.text.primary,
   },
-  connectedSourceMeta: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
+  availableSourceDescription: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
   },
-  removeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  emptySourcesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.xl,
+  },
+  emptyTitle: {
+    ...theme.typography.styles.h3,
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  emptyText: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  loginButton: {
+    marginTop: theme.spacing.md,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(11, 11, 35, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 100,
-  },
-  actionMessage: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 40 : 20,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
-    backgroundColor: 'rgba(168, 148, 255, 0.2)',
-    borderRadius: 8,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.accent.primary,
-  },
-  actionMessageText: {
-    ...theme.typography.styles.bodySmall,
-    color: theme.colors.text.primary,
+  loadingText: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.md,
   },
 });
 

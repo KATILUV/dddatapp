@@ -15,6 +15,7 @@ import ChatScreen from '../screens/ChatScreen';
 import DataConnectionScreen from '../screens/DataConnectionScreen';
 import InsightsDashboardScreen from '../screens/InsightsDashboardScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import LoginScreen from '../screens/LoginScreen';
 import { 
   WelcomeScreen,
   ConnectDataScreen,
@@ -159,6 +160,9 @@ const AppNavigator = ({ isFirstLaunch }) => {
         <Stack.Screen name="ConnectData" component={ConnectDataScreen} />
         <Stack.Screen name="AboutSolstice" component={AboutSolsticeScreen} />
         <Stack.Screen name="PersonalizationPreferences" component={PersonalizationPreferencesScreen} />
+        
+        {/* Authentication */}
+        <Stack.Screen name="Login" component={LoginScreen} />
         
         {/* Main app */}
         <Stack.Screen name="Main" component={MainNavigator} />

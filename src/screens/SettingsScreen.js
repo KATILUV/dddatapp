@@ -22,12 +22,14 @@ import AnimatedOrb from '../components/AnimatedOrb';
 import theme from '../theme';
 import { fadeInUp } from '../utils/animations';
 import { getData, storeData, removeData } from '../utils/storage';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * Settings screen component
  * @returns {React.ReactElement} - Rendered component
  */
 const SettingsScreen = ({ navigation }) => {
+  const { user, isAuthenticated, signIn, signOut } = useAuth();
   const [userData, setUserData] = useState(null);
   const [settings, setSettings] = useState({
     notifications: true,
@@ -310,6 +312,42 @@ const SettingsScreen = ({ navigation }) => {
                 <Text style={styles.aboutValue}>{Platform.OS} {(new Date()).getFullYear()}</Text>
               </View>
             </GlassmorphicCard>
+            
+            {/* Authentication */}
+            <View style={styles.authContainer}>
+              {isAuthenticated ? (
+                <Button
+                  title="Sign Out"
+                  variant="outline"
+                  size="medium"
+                  iconLeft="log-out-outline"
+                  onPress={() => {
+                    Alert.alert(
+                      "Sign Out",
+                      "Are you sure you want to sign out?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        { 
+                          text: "Sign Out", 
+                          style: "destructive",
+                          onPress: () => signOut()
+                        }
+                      ]
+                    );
+                  }}
+                  style={styles.authButton}
+                />
+              ) : (
+                <Button
+                  title="Sign In"
+                  variant="primary"
+                  size="medium"
+                  iconLeft="log-in-outline"
+                  onPress={() => navigation.navigate('Login')}
+                  style={styles.authButton}
+                />
+              )}
+            </View>
           </Animated.View>
         </ScrollView>
       </View>
