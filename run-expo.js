@@ -2,6 +2,7 @@ const express = require('express');
 const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const QRCode = require('qrcode');
 const app = express();
 
 // Global variable to store the Expo URL
@@ -17,6 +18,46 @@ const tmpDir = path.join(__dirname, 'tmp');
 if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir);
 }
+
+// Create a public directory for static assets
+const publicDir = path.join(__dirname, 'public');
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir);
+}
+
+// Route to serve QR code image
+app.get('/qr-code', async (req, res) => {
+  if (!expoUrl) {
+    return res.status(404).send('Expo URL not available yet');
+  }
+  
+  try {
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(expoUrl, { 
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      width: 300,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+    
+    // Extract base64 data
+    const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
+    const imgBuffer = Buffer.from(base64Data, 'base64');
+    
+    // Send the image
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Length': imgBuffer.length
+    });
+    res.end(imgBuffer);
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    res.status(500).send('Error generating QR code');
+  }
+});
 
 // Create a route that displays the QR code and instructions
 app.get('/', (req, res) => {
@@ -159,6 +200,12 @@ app.get('/', (req, res) => {
           <h3>Enter this URL in Expo Go:</h3>
           <div class="url-box">${expoUrl}</div>
           <p>Copy this URL and enter it manually in the Expo Go app.</p>
+          
+          <h3>Or scan this QR code:</h3>
+          <div class="qr-code">
+            <img src="/qr-code?t=${Date.now()}" alt="QR Code for Expo URL" />
+          </div>
+          <p>Open Expo Go and scan this QR code to connect to the app.</p>
         </div>
       ` : `
         <div class="note">
@@ -218,12 +265,27 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Expo: ${output}`);
     
     // Look for tunnel URL in the output
-    const tunnelUrlMatch = output.match(/https:\/\/[a-z0-9-]+\.expo\.dev/i);
+    const tunnelUrlMatch = output.match(/https:\/\/[a-z0-9-]+\.expo\.dev/i) || 
+                         output.match(/exp:\/\/[a-z0-9.-]+\.exp\.dev/i) ||
+                         output.match(/exp:\/\/\d+\.\d+\.\d+\.\d+:\d+/i);
+    
     if (tunnelUrlMatch) {
       expoUrl = tunnelUrlMatch[0];
       expoUrlLastUpdated = Date.now();
       expoStatus = 'Expo tunnel ready!';
-      console.log(`Found Expo tunnel URL: ${expoUrl}`);
+      console.log(`Found Expo URL: ${expoUrl}`);
+      
+      // Generate a QR code and save it to the public directory
+      try {
+        QRCode.toFile(path.join(publicDir, 'expo-qr.png'), expoUrl, {
+          errorCorrectionLevel: 'H',
+          margin: 1,
+          width: 300
+        });
+        console.log('QR code generated successfully');
+      } catch (err) {
+        console.error('Error generating QR code file:', err);
+      }
     }
     
     // Update status based on output indicators
