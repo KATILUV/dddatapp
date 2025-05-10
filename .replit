@@ -24,6 +24,14 @@ args = "ServerWithAuth"
 task = "workflow.run"
 args = "TypeScriptServer"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "SimpleServer"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "BasicServer"
+
 [[workflows.workflow]]
 name = "StaticServer"
 author = "agent"
@@ -49,6 +57,24 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx ts-node --skip-project server/server.ts"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "SimpleServer"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node server.js"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "BasicServer"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node basic-server.js"
 waitForPort = 5000
 
 [deployment]

@@ -1,109 +1,115 @@
-import { useState, useEffect, useContext, createContext } from 'react';
-import { storeData, getData, removeData } from '../utils/storage';
-import axios from 'axios';
+/**
+ * Authentication hook for managing user authentication state
+ * Simplified for development with the basic server
+ */
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import api from '../services/api';
 
-// Create a context for authentication state
-const AuthContext = createContext();
+// Create auth context
+const AuthContext = createContext(null);
 
-// Provider component that wraps your app and makes auth object available to any
-// child component that calls useAuth().
+// Auth provider component
 export function AuthProvider({ children }) {
-  const auth = useProvideAuth();
-  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
-}
-
-// Hook for child components to get the auth object and re-render when it changes.
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
-
-// Provider hook that creates auth object and handles state
-function useProvideAuth() {
+  // For development - check if there's a mock user in localStorage
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Check if the user is logged in on initial load
+  // Load user on mount
   useEffect(() => {
-    const fetchUser = async () => {
+    const loadUser = async () => {
       try {
-        setLoading(true);
+        // Try to get user from API endpoint first
+        let userData = null;
         
-        // Try to get user data from local storage first
-        const storedUser = await getData('userData');
+        try {
+          userData = await api.getCurrentUser();
+        } catch (apiError) {
+          console.log('API user endpoint not available, using localStorage fallback');
+        }
         
-        if (storedUser) {
-          setUser(storedUser);
-          // Verify with the server to make sure the session is still valid
-          try {
-            const response = await axios.get('/api/auth/user');
-            if (response.data) {
-              setUser(response.data);
-              await storeData('userData', response.data);
-            }
-          } catch (err) {
-            // Session invalid/expired, clear local storage
-            await removeData('userData');
-            setUser(null);
-          }
-        } else {
-          // Try to get the user from the server (in case they're already logged in)
-          try {
-            const response = await axios.get('/api/auth/user');
-            if (response.data) {
-              setUser(response.data);
-              await storeData('userData', response.data);
-            }
-          } catch (err) {
-            // Not logged in, that's fine
+        // If API call fails or returns no user, try localStorage
+        if (!userData) {
+          const storedUser = localStorage.getItem('solstice_user');
+          if (storedUser) {
+            userData = JSON.parse(storedUser);
           }
         }
-      } catch (err) {
-        console.error('Error checking authentication:', err);
-        setError(err);
+        
+        if (userData) {
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Failed to load user:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUser();
+    loadUser();
   }, []);
 
-  // Sign in function
-  const signIn = async () => {
-    try {
-      // Redirect to Replit Auth login
-      window.location.href = '/api/login';
-    } catch (err) {
-      console.error('Error during sign in:', err);
-      setError(err);
-      throw err;
-    }
-  };
-
-  // Sign out function
-  const signOut = async () => {
-    try {
-      // Clear user data from local storage
-      await removeData('userData');
-      setUser(null);
-      
-      // Redirect to the logout endpoint
-      window.location.href = '/api/logout';
-    } catch (err) {
-      console.error('Error during sign out:', err);
-      setError(err);
-      throw err;
-    }
-  };
-
-  // Return the user object and auth methods
-  return {
+  // Create auth value object
+  const value = {
     user,
-    loading,
-    error,
     isAuthenticated: !!user,
-    signIn,
-    signOut,
+    loading,
+    
+    // For development - simplified auth functions
+    signIn: async () => {
+      try {
+        // In production, this would redirect to Replit Auth
+        // For dev/demo, we'll create a mock user
+        const mockUser = {
+          id: '1',
+          username: 'demouser',
+          email: 'demo@example.com',
+          firstName: 'Demo',
+          lastName: 'User',
+          profileImageUrl: 'https://ui-avatars.com/api/?name=Demo+User&background=a894ff&color=fff'
+        };
+        
+        // Store user in localStorage for persistence
+        localStorage.setItem('solstice_user', JSON.stringify(mockUser));
+        setUser(mockUser);
+        
+        return true;
+      } catch (error) {
+        console.error('Sign in error:', error);
+        return false;
+      }
+    },
+    
+    // Sign out function
+    signOut: async () => {
+      try {
+        // Clear stored user
+        localStorage.removeItem('solstice_user');
+        setUser(null);
+        return true;
+      } catch (error) {
+        console.error('Sign out error:', error);
+        return false;
+      }
+    }
   };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Custom hook to use auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+// Convenience function to get the auth state
+export function useProvideAuth() {
+  return useAuth();
 }

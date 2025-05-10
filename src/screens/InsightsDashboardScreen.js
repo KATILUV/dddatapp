@@ -26,6 +26,7 @@ import theme from '../theme';
 import { fadeInUp } from '../utils/animations';
 import { getData } from '../utils/storage';
 import openaiService from '../services/openai';
+import api from '../services/api';
 
 /**
  * Insights Dashboard screen component
@@ -188,24 +189,62 @@ const InsightsDashboardScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    // Check if user has uploaded any data
-    const checkData = async () => {
+    // Fetch data sources and insights from API
+    const fetchData = async () => {
       try {
-        const dataSources = await getData('dataSources');
+        setIsAnalyzing(true);
+        
+        // Fetch data sources
+        const dataSources = await api.getDataSources();
         const hasDataSources = dataSources && dataSources.length > 0;
         setHasData(hasDataSources);
         
-        if (hasDataSources) {
-          // Analyze data sources to generate insights
+        // Fetch insights
+        const insightsData = await api.getInsights();
+        if (insightsData && insightsData.length > 0) {
+          // Transform API data to match our UI format
+          const formattedInsights = insightsData.map(insight => ({
+            id: insight.id.toString(),
+            title: insight.title,
+            description: insight.summary,
+            category: insight.type === 'behavioral' ? 'communication' : 
+                      insight.type === 'creative' ? 'preferences' : 'wellness',
+            date: insight.createdAt || new Date().toISOString(),
+            icon: insight.type === 'behavioral' ? 'chatbubbles' :
+                  insight.type === 'creative' ? 'star' : 'trending-down',
+            color: insight.type === 'behavioral' ? theme.colors.accent.primary :
+                   insight.type === 'creative' ? theme.colors.warning.default : theme.colors.success.default,
+            confidence: insight.confidence || 85
+          }));
+          
+          setInsights(formattedInsights);
+        } else if (hasDataSources) {
+          // If we have data sources but no insights, fall back to generated insights
           const generatedInsights = await analyzeDataSources(dataSources);
           setInsights(generatedInsights);
         }
       } catch (error) {
-        console.error('Error checking data sources:', error);
+        console.error('Error fetching data:', error);
+        
+        // Fallback to local data if API fails
+        try {
+          const dataSources = await getData('dataSources');
+          const hasDataSources = dataSources && dataSources.length > 0;
+          setHasData(hasDataSources);
+          
+          if (hasDataSources) {
+            const generatedInsights = await analyzeDataSources(dataSources);
+            setInsights(generatedInsights);
+          }
+        } catch (localError) {
+          console.error('Error with fallback data:', localError);
+        }
+      } finally {
+        setIsAnalyzing(false);
       }
     };
     
-    checkData();
+    fetchData();
   }, []);
   
   const renderPlaceholder = () => (

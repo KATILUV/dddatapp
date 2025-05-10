@@ -6,6 +6,9 @@ const PORT = process.env.PORT || 5000;
 // Serve static files
 app.use(express.static(path.join(__dirname, 'web-build')));
 
+// Add middleware for JSON parsing
+app.use(express.json());
+
 // Add API endpoints for data
 app.get('/api/status', (req, res) => {
   res.json({ 

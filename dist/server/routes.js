@@ -1,17 +1,17 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.registerRoutes = registerRoutes;
-const http_1 = require("http");
-const storage_1 = require("./storage");
-const replitAuth_1 = require("./replitAuth");
+const http = require('http');
+const path = require('path');
+const storage = require('./storage').storage;
+const auth = require('./replitAuth');
 async function registerRoutes(app) {
     // Auth middleware
-    await (0, replitAuth_1.setupAuth)(app);
-    // Auth routes
-    app.get('/api/auth/user', replitAuth_1.isAuthenticated, async (req, res) => {
+    await auth.setupAuth(app);
+    // API Routes
+    // Authentication routes
+    app.get('/api/auth/user', auth.isAuthenticated, async (req, res) => {
         try {
             const userId = req.user.claims.sub;
-            const user = await storage_1.storage.getUser(userId);
+            const user = await storage.getUser(userId);
             res.json(user);
         }
         catch (error) {
@@ -19,194 +19,118 @@ async function registerRoutes(app) {
             res.status(500).json({ message: "Failed to fetch user" });
         }
     });
-    // User preferences endpoints
-    app.get('/api/user/:userId/preferences', replitAuth_1.isAuthenticated, async (req, res) => {
+    // User preferences routes
+    app.get('/api/preferences', isAuthenticated, async (req, res) => {
         try {
-            // Ensure user can only access their own data
-            if (req.user.claims.sub !== req.params.userId) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-            const { userId } = req.params;
-            const preferences = await storage_1.storage.getUserPreferences(userId);
-            if (!preferences) {
-                return res.json({ userId }); // Return empty preferences object
-            }
+            const userId = req.user.claims.sub;
+            const preferences = await storage.getUserPreferences(userId);
+            res.json(preferences || { userId });
+        }
+        catch (error) {
+            console.error("Error fetching preferences:", error);
+            res.status(500).json({ message: "Failed to fetch preferences" });
+        }
+    });
+    app.post('/api/preferences', isAuthenticated, async (req, res) => {
+        try {
+            const userId = req.user.claims.sub;
+            const preferences = await storage.setUserPreferences({
+                userId,
+                ...req.body
+            });
             res.json(preferences);
         }
         catch (error) {
-            console.error('Error fetching preferences:', error);
-            res.status(500).json({ message: 'Failed to fetch preferences' });
+            console.error("Error saving preferences:", error);
+            res.status(500).json({ message: "Failed to save preferences" });
         }
     });
-    app.post('/api/user/:userId/preferences', replitAuth_1.isAuthenticated, async (req, res) => {
+    // Data sources routes
+    app.get('/api/data-sources', isAuthenticated, async (req, res) => {
         try {
-            // Ensure user can only access their own data
-            if (req.user.claims.sub !== req.params.userId) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-            const { userId } = req.params;
-            const preferences = req.body;
-            const savedPreferences = await storage_1.storage.setUserPreferences({
+            const userId = req.user.claims.sub;
+            const sources = await storage.getUserDataSources(userId);
+            res.json(sources);
+        }
+        catch (error) {
+            console.error("Error fetching data sources:", error);
+            res.status(500).json({ message: "Failed to fetch data sources" });
+        }
+    });
+    app.post('/api/data-sources', isAuthenticated, async (req, res) => {
+        try {
+            const userId = req.user.claims.sub;
+            const source = await storage.addDataSource({
                 userId,
-                ...preferences
+                ...req.body
             });
-            res.json(savedPreferences);
+            res.json(source);
         }
         catch (error) {
-            console.error('Error saving preferences:', error);
-            res.status(500).json({ message: 'Failed to save preferences' });
+            console.error("Error adding data source:", error);
+            res.status(500).json({ message: "Failed to add data source" });
         }
     });
-    // Data source endpoints
-    app.get('/api/user/:userId/data-sources', replitAuth_1.isAuthenticated, async (req, res) => {
+    app.put('/api/data-sources/:id', isAuthenticated, async (req, res) => {
         try {
-            // Ensure user can only access their own data
-            if (req.user.claims.sub !== req.params.userId) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-            const { userId } = req.params;
-            const dataSources = await storage_1.storage.getUserDataSources(userId);
-            res.json(dataSources);
+            const sourceId = parseInt(req.params.id);
+            const source = await storage.updateDataSource(sourceId, req.body);
+            res.json(source);
         }
         catch (error) {
-            console.error('Error fetching data sources:', error);
-            res.status(500).json({ message: 'Failed to fetch data sources' });
+            console.error("Error updating data source:", error);
+            res.status(500).json({ message: "Failed to update data source" });
         }
     });
-    app.post('/api/user/:userId/data-sources', replitAuth_1.isAuthenticated, async (req, res) => {
+    app.delete('/api/data-sources/:id', isAuthenticated, async (req, res) => {
         try {
-            // Ensure user can only access their own data
-            if (req.user.claims.sub !== req.params.userId) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-            const { userId } = req.params;
-            const dataSource = req.body;
-            const savedDataSource = await storage_1.storage.addDataSource({
-                userId,
-                ...dataSource
-            });
-            res.json(savedDataSource);
-        }
-        catch (error) {
-            console.error('Error adding data source:', error);
-            res.status(500).json({ message: 'Failed to add data source' });
-        }
-    });
-    app.delete('/api/data-sources/:id', replitAuth_1.isAuthenticated, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const dataSourceId = parseInt(id);
-            // Check if the data source belongs to the current user
-            const [dataSource] = await storage_1.storage.getUserDataSources(req.user.claims.sub);
-            if (!dataSource) {
-                return res.status(404).json({ message: 'Data source not found' });
-            }
-            await storage_1.storage.removeDataSource(dataSourceId);
+            const sourceId = parseInt(req.params.id);
+            await storage.removeDataSource(sourceId);
             res.json({ success: true });
         }
         catch (error) {
-            console.error('Error removing data source:', error);
-            res.status(500).json({ message: 'Failed to remove data source' });
+            console.error("Error removing data source:", error);
+            res.status(500).json({ message: "Failed to remove data source" });
         }
     });
-    // OAuth endpoints for third-party data connections
-    app.get('/api/oauth/authorize/:provider', replitAuth_1.isAuthenticated, async (req, res) => {
+    // Insights routes
+    app.get('/api/insights', isAuthenticated, async (req, res) => {
         try {
-            const { provider } = req.params;
             const userId = req.user.claims.sub;
-            const redirectUri = `${req.protocol}://${req.get('host')}/api/oauth/callback`;
-            // Use the OAuth service from our server/oauth-service.ts
-            const authUrl = await import('./oauth-service.js').then(module => module.getAuthorizationUrl(provider, userId, redirectUri));
-            res.json({ authUrl });
-        }
-        catch (error) {
-            console.error('Error generating auth URL:', error);
-            res.status(500).json({ message: 'Failed to generate auth URL' });
-        }
-    });
-    app.get('/api/oauth/callback', async (req, res) => {
-        try {
-            // Use the OAuth callback handler from our server/oauth-service.ts
-            await import('./oauth-service.js').then(module => module.handleOAuthCallback(req, res));
-        }
-        catch (error) {
-            console.error('Error handling OAuth callback:', error);
-            res.redirect('/?error=auth_failed');
-        }
-    });
-    // Insights endpoints
-    app.get('/api/user/:userId/insights', replitAuth_1.isAuthenticated, async (req, res) => {
-        try {
-            // Ensure user can only access their own data
-            if (req.user.claims.sub !== req.params.userId) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-            const { userId } = req.params;
-            const insights = await storage_1.storage.getUserInsights(userId);
+            const insights = await storage.getUserInsights(userId);
             res.json(insights);
         }
         catch (error) {
-            console.error('Error fetching insights:', error);
-            res.status(500).json({ message: 'Failed to fetch insights' });
+            console.error("Error fetching insights:", error);
+            res.status(500).json({ message: "Failed to fetch insights" });
         }
     });
-    app.get('/api/insights/:id', replitAuth_1.isAuthenticated, async (req, res) => {
+    app.get('/api/insights/:id', isAuthenticated, async (req, res) => {
         try {
-            const { id } = req.params;
-            const insight = await storage_1.storage.getInsightById(parseInt(id));
+            const insightId = parseInt(req.params.id);
+            const insight = await storage.getInsightById(insightId);
             if (!insight) {
-                return res.status(404).json({ message: 'Insight not found' });
-            }
-            // Ensure user can only access their own data
-            if (req.user.claims.sub !== insight.userId) {
-                return res.status(403).json({ message: "Access denied" });
+                return res.status(404).json({ message: "Insight not found" });
             }
             res.json(insight);
         }
         catch (error) {
-            console.error('Error fetching insight:', error);
-            res.status(500).json({ message: 'Failed to fetch insight' });
+            console.error("Error fetching insight:", error);
+            res.status(500).json({ message: "Failed to fetch insight" });
         }
     });
-    app.post('/api/user/:userId/insights', replitAuth_1.isAuthenticated, async (req, res) => {
-        try {
-            // Ensure user can only access their own data
-            if (req.user.claims.sub !== req.params.userId) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-            const { userId } = req.params;
-            const insight = req.body;
-            const savedInsight = await storage_1.storage.saveInsight({
-                userId,
-                ...insight
-            });
-            res.json(savedInsight);
-        }
-        catch (error) {
-            console.error('Error saving insight:', error);
-            res.status(500).json({ message: 'Failed to save insight' });
-        }
+    // Status endpoint
+    app.get('/api/status', (req, res) => {
+        res.json({
+            status: 'ok',
+            message: 'Solstice API is running',
+            version: '1.0.0'
+        });
     });
-    app.delete('/api/insights/:id', replitAuth_1.isAuthenticated, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const insightId = parseInt(id);
-            // Check if the insight belongs to the current user
-            const insight = await storage_1.storage.getInsightById(insightId);
-            if (!insight) {
-                return res.status(404).json({ message: 'Insight not found' });
-            }
-            if (req.user.claims.sub !== insight.userId) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-            await storage_1.storage.removeInsight(insightId);
-            res.json({ success: true });
-        }
-        catch (error) {
-            console.error('Error removing insight:', error);
-            res.status(500).json({ message: 'Failed to remove insight' });
-        }
+    // For all other requests, serve the React app
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, '../web-build', 'index.html'));
     });
-    const httpServer = (0, http_1.createServer)(app);
+    const httpServer = createServer(app);
     return httpServer;
 }

@@ -169,10 +169,13 @@ const SettingsScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.profileDetails}>
                   <Text style={styles.profileName}>
-                    {userData?.name || 'User'}
+                    {user ? (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username) : (userData?.name || 'User')}
                   </Text>
                   <Text style={styles.profileType}>
-                    {userData?.tone ? `${userData.tone.charAt(0).toUpperCase() + userData.tone.slice(1)} communication style` : 'No preferences set'}
+                    {user ? 
+                      (user.email ? `${user.email}` : 'Authenticated User') : 
+                      (userData?.tone ? `${userData.tone.charAt(0).toUpperCase() + userData.tone.slice(1)} communication style` : 'No preferences set')
+                    }
                   </Text>
                 </View>
               </View>
@@ -343,7 +346,7 @@ const SettingsScreen = ({ navigation }) => {
                   variant="primary"
                   size="medium"
                   iconLeft="log-in-outline"
-                  onPress={() => navigation.navigate('Login')}
+                  onPress={signIn}
                   style={styles.authButton}
                 />
               )}

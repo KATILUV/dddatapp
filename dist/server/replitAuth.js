@@ -40,16 +40,17 @@ exports.isAuthenticated = void 0;
 exports.getSession = getSession;
 exports.setupAuth = setupAuth;
 const client = __importStar(require("openid-client"));
-// Using direct import from node_modules to avoid path issues
-// @ts-ignore - ignoring TypeScript error for now
-const passport_js_1 = require("../../../node_modules/openid-client/build/passport.js");
-const passport_1 = __importDefault(require("passport"));
+const passport_1 = require("openid-client/passport");
+const passport_2 = __importDefault(require("passport"));
 const express_session_1 = __importDefault(require("express-session"));
 const memoizee_1 = __importDefault(require("memoizee"));
 const connect_pg_simple_1 = __importDefault(require("connect-pg-simple"));
 const storage_1 = require("./storage");
 if (!process.env.REPLIT_DOMAINS) {
     throw new Error("Environment variable REPLIT_DOMAINS not provided");
+}
+if (!process.env.SESSION_SECRET) {
+    throw new Error("Environment variable SESSION_SECRET not provided");
 }
 const getOidcConfig = (0, memoizee_1.default)(async () => {
     return await client.discovery(new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"), process.env.REPL_ID);
@@ -93,8 +94,8 @@ async function upsertUser(claims) {
 async function setupAuth(app) {
     app.set("trust proxy", 1);
     app.use(getSession());
-    app.use(passport_1.default.initialize());
-    app.use(passport_1.default.session());
+    app.use(passport_2.default.initialize());
+    app.use(passport_2.default.session());
     const config = await getOidcConfig();
     const verify = async (tokens, verified) => {
         const user = {};
@@ -102,26 +103,25 @@ async function setupAuth(app) {
         await upsertUser(tokens.claims());
         verified(null, user);
     };
-    for (const domain of process.env
-        .REPLIT_DOMAINS.split(",")) {
-        const strategy = new passport_js_1.Strategy({
+    for (const domain of process.env.REPLIT_DOMAINS.split(",")) {
+        const strategy = new passport_1.Strategy({
             name: `replitauth:${domain}`,
             config,
             scope: "openid email profile offline_access",
             callbackURL: `https://${domain}/api/callback`,
         }, verify);
-        passport_1.default.use(strategy);
+        passport_2.default.use(strategy);
     }
-    passport_1.default.serializeUser((user, cb) => cb(null, user));
-    passport_1.default.deserializeUser((user, cb) => cb(null, user));
+    passport_2.default.serializeUser((user, cb) => cb(null, user));
+    passport_2.default.deserializeUser((user, cb) => cb(null, user));
     app.get("/api/login", (req, res, next) => {
-        passport_1.default.authenticate(`replitauth:${req.hostname}`, {
+        passport_2.default.authenticate(`replitauth:${req.hostname}`, {
             prompt: "login consent",
             scope: ["openid", "email", "profile", "offline_access"],
         })(req, res, next);
     });
     app.get("/api/callback", (req, res, next) => {
-        passport_1.default.authenticate(`replitauth:${req.hostname}`, {
+        passport_2.default.authenticate(`replitauth:${req.hostname}`, {
             successReturnToOrRedirect: "/",
             failureRedirect: "/api/login",
         })(req, res, next);

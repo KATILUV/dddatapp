@@ -72,7 +72,7 @@ const DataConnectionScreen = ({ navigation }) => {
       
       try {
         setLoading(true);
-        const data = await api.dataSources.getAll();
+        const data = await api.getDataSources();
         setConnectedSources(data);
       } catch (error) {
         console.error('Error fetching data sources:', error);
@@ -120,7 +120,7 @@ const DataConnectionScreen = ({ navigation }) => {
               // Find the source in our connected sources
               const source = connectedSources.find(s => s.sourceType === sourceId);
               if (source) {
-                await api.dataSources.remove(source.id);
+                await api.removeDataSource(source.id);
                 setConnectedSources(connectedSources.filter(s => s.id !== source.id));
               }
             } catch (error) {
@@ -139,7 +139,12 @@ const DataConnectionScreen = ({ navigation }) => {
   const handleConnectSource = async (sourceId) => {
     try {
       setLoading(true);
-      await api.dataSources.startOAuthFlow(sourceId);
+      await api.addDataSource({
+        name: sourceId.charAt(0).toUpperCase() + sourceId.slice(1),
+        sourceType: sourceId,
+        status: 'connected',
+        lastSynced: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error starting OAuth flow:', error);
       setLoading(false);

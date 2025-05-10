@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.storage = exports.DatabaseStorage = void 0;
+const schema_1 = require("../shared/schema");
 const db_1 = require("./db");
 const drizzle_orm_1 = require("drizzle-orm");
-const schema_1 = require("../shared/schema");
 class DatabaseStorage {
     // User operations
     async getUser(id) {
@@ -33,22 +33,22 @@ class DatabaseStorage {
         return prefs;
     }
     async setUserPreferences(prefs) {
-        // Check if preferences already exist
-        const existing = await this.getUserPreferences(prefs.userId);
-        if (existing) {
-            // Update existing
-            const [updated] = await db_1.db
+        const [existingPrefs] = await db_1.db
+            .select()
+            .from(schema_1.userPreferences)
+            .where((0, drizzle_orm_1.eq)(schema_1.userPreferences.userId, prefs.userId));
+        if (existingPrefs) {
+            const [updatedPrefs] = await db_1.db
                 .update(schema_1.userPreferences)
                 .set({
                 ...prefs,
                 updatedAt: new Date(),
             })
-                .where((0, drizzle_orm_1.eq)(schema_1.userPreferences.id, existing.id))
+                .where((0, drizzle_orm_1.eq)(schema_1.userPreferences.id, existingPrefs.id))
                 .returning();
-            return updated;
+            return updatedPrefs;
         }
         else {
-            // Insert new
             const [newPrefs] = await db_1.db
                 .insert(schema_1.userPreferences)
                 .values(prefs)
@@ -58,11 +58,10 @@ class DatabaseStorage {
     }
     // Data sources
     async getUserDataSources(userId) {
-        return db_1.db
+        return await db_1.db
             .select()
             .from(schema_1.dataSources)
-            .where((0, drizzle_orm_1.eq)(schema_1.dataSources.userId, userId))
-            .orderBy(schema_1.dataSources.createdAt);
+            .where((0, drizzle_orm_1.eq)(schema_1.dataSources.userId, userId));
     }
     async addDataSource(source) {
         const [newSource] = await db_1.db
@@ -72,7 +71,7 @@ class DatabaseStorage {
         return newSource;
     }
     async updateDataSource(id, source) {
-        const [updated] = await db_1.db
+        const [updatedSource] = await db_1.db
             .update(schema_1.dataSources)
             .set({
             ...source,
@@ -80,7 +79,7 @@ class DatabaseStorage {
         })
             .where((0, drizzle_orm_1.eq)(schema_1.dataSources.id, id))
             .returning();
-        return updated;
+        return updatedSource;
     }
     async removeDataSource(id) {
         await db_1.db
@@ -96,31 +95,14 @@ class DatabaseStorage {
         return token;
     }
     async saveOAuthToken(token) {
-        // Check if token already exists
-        const existing = await this.getOAuthToken(token.dataSourceId);
-        if (existing) {
-            // Update existing
-            const [updated] = await db_1.db
-                .update(schema_1.oauthTokens)
-                .set({
-                ...token,
-                updatedAt: new Date(),
-            })
-                .where((0, drizzle_orm_1.eq)(schema_1.oauthTokens.id, existing.id))
-                .returning();
-            return updated;
-        }
-        else {
-            // Insert new
-            const [newToken] = await db_1.db
-                .insert(schema_1.oauthTokens)
-                .values(token)
-                .returning();
-            return newToken;
-        }
+        const [newToken] = await db_1.db
+            .insert(schema_1.oauthTokens)
+            .values(token)
+            .returning();
+        return newToken;
     }
     async updateOAuthToken(id, token) {
-        const [updated] = await db_1.db
+        const [updatedToken] = await db_1.db
             .update(schema_1.oauthTokens)
             .set({
             ...token,
@@ -128,15 +110,14 @@ class DatabaseStorage {
         })
             .where((0, drizzle_orm_1.eq)(schema_1.oauthTokens.id, id))
             .returning();
-        return updated;
+        return updatedToken;
     }
     // Insights
     async getUserInsights(userId) {
-        return db_1.db
+        return await db_1.db
             .select()
             .from(schema_1.insights)
-            .where((0, drizzle_orm_1.eq)(schema_1.insights.userId, userId))
-            .orderBy(schema_1.insights.createdAt);
+            .where((0, drizzle_orm_1.eq)(schema_1.insights.userId, userId));
     }
     async getInsightById(id) {
         const [insight] = await db_1.db
@@ -153,7 +134,7 @@ class DatabaseStorage {
         return newInsight;
     }
     async updateInsight(id, insight) {
-        const [updated] = await db_1.db
+        const [updatedInsight] = await db_1.db
             .update(schema_1.insights)
             .set({
             ...insight,
@@ -161,7 +142,7 @@ class DatabaseStorage {
         })
             .where((0, drizzle_orm_1.eq)(schema_1.insights.id, id))
             .returning();
-        return updated;
+        return updatedInsight;
     }
     async removeInsight(id) {
         await db_1.db
@@ -170,5 +151,4 @@ class DatabaseStorage {
     }
 }
 exports.DatabaseStorage = DatabaseStorage;
-// Create and export the storage instance
 exports.storage = new DatabaseStorage();
