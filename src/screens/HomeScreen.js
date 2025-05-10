@@ -112,8 +112,6 @@ const HomeScreen = ({ navigation }) => {
       {/* Header */}
       <Animated.View style={[styles.header, headerAnim]}>
         <View style={styles.headerContent}>
-          <Text style={styles.greeting}>{getTimeBasedGreeting()}</Text>
-          
           <View style={styles.headerOrb}>
             <AnimatedOrb 
               size="small" 
@@ -122,6 +120,8 @@ const HomeScreen = ({ navigation }) => {
               glow 
             />
           </View>
+          
+          <Text style={styles.appName}>SOLSTICE</Text>
         </View>
       </Animated.View>
       
@@ -132,28 +132,26 @@ const HomeScreen = ({ navigation }) => {
       >
         {/* Activity Stats */}
         <Animated.View style={statsAnim}>
-          <GlassmorphicCard style={styles.statsCard}>
-            <Text style={styles.cardTitle}>YOUR DATA</Text>
+          <View style={styles.mainHeadingContainer}>
+            <Text style={styles.mainHeading}>Own your data.</Text>
+            <Text style={styles.mainHeading}>Understand yourself.</Text>
             
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{activityStats.dataPoints}</Text>
-                <Text style={styles.statLabel}>Data Points</Text>
-              </View>
+            <Text style={styles.subHeading}>
+              Other companies sell your data or keep it hidden. 
+              Solstice gives you full control over your digital history, 
+              unlocking personalized insights to help you grow.
+            </Text>
+            
+            <View style={styles.actionButtonsContainer}>
+              <GlassmorphicCard style={styles.actionButton} onPress={() => navigation.navigate('DataConnection')}>
+                <Text style={styles.actionButtonText}>Connect accounts</Text>
+              </GlassmorphicCard>
               
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{activityStats.insights}</Text>
-                <Text style={styles.statLabel}>Insights</Text>
-              </View>
-              
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {formatLastActive(activityStats.lastActive)}
-                </Text>
-                <Text style={styles.statLabel}>Last Active</Text>
-              </View>
+              <GlassmorphicCard style={styles.actionButton} onPress={() => navigation.navigate('InsightsDashboard')}>
+                <Text style={styles.actionButtonText}>Learn more</Text>
+              </GlassmorphicCard>
             </View>
-          </GlassmorphicCard>
+          </View>
         </Animated.View>
         
         {/* Recent Insights */}
@@ -230,6 +228,24 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        
+        {/* Data Categories (from reference) */}
+        <Animated.View style={[styles.dataCategories, actionsAnim]}>
+          <View style={styles.dataCategoryItem}>
+            <Ionicons name="time-outline" size={22} color={theme.colors.accent.primary} />
+            <Text style={styles.dataCategoryText}>Sites you visit</Text>
+          </View>
+          
+          <View style={styles.dataCategoryItem}>
+            <Ionicons name="chatbubble-outline" size={22} color={theme.colors.accent.primary} />
+            <Text style={styles.dataCategoryText}>Topics you care about</Text>
+          </View>
+          
+          <View style={styles.dataCategoryItem}>
+            <Ionicons name="people-outline" size={22} color={theme.colors.accent.primary} />
+            <Text style={styles.dataCategoryText}>Social connections</Text>
+          </View>
+        </Animated.View>
       </ScrollView>
     </GradientBackground>
   );
@@ -246,11 +262,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  greeting: {
-    ...theme.typography.styles.h2,
-    color: theme.colors.text.primary,
-    marginRight: theme.spacing.lg,
-    letterSpacing: theme.typography.letterSpacing.tight,
+  appName: {
+    ...theme.typography.styles.h4,
+    color: theme.colors.text.secondary,
+    letterSpacing: theme.typography.letterSpacing.extraWide,
+    fontFamily: theme.typography.fonts.primary.medium,
   },
   headerOrb: {
     width: 40,
@@ -263,31 +279,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xxxl,
   },
-  statsCard: {
-    marginBottom: theme.spacing.lg,
+  mainHeadingContainer: {
+    marginBottom: theme.spacing.xl,
+    paddingTop: theme.spacing.lg,
   },
-  cardTitle: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    marginBottom: theme.spacing.md,
+  mainHeading: {
+    ...theme.typography.styles.h1,
+    color: theme.colors.text.primary,
+    letterSpacing: theme.typography.letterSpacing.tight,
+    marginBottom: theme.spacing.xs,
     fontFamily: theme.typography.fonts.primary.medium,
   },
-  statsGrid: {
+  subHeading: {
+    ...theme.typography.styles.bodyLarge,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    lineHeight: theme.lineHeights.body * 1.1,
+  },
+  actionButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: theme.spacing.lg,
   },
-  statItem: {
-    alignItems: 'center',
+  actionButton: {
+    width: '48%',
+    padding: 0,
+    marginVertical: 0,
   },
-  statValue: {
-    ...theme.typography.styles.h2,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  statLabel: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
+  actionButtonText: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    paddingVertical: theme.spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',

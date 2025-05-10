@@ -69,7 +69,7 @@ export default function App() {
       <GradientBackground>
         <View style={styles.loadingContainer}>
           <AnimatedOrb size="medium" enhanced3d glow float />
-          <Text style={styles.loadingText}>Loading Voa</Text>
+          <Text style={styles.loadingText}>SOLSTICE</Text>
         </View>
       </GradientBackground>
     );
@@ -97,8 +97,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...theme.typography.styles.h3,
-    color: theme.colors.text.primary,
+    color: theme.colors.text.secondary,
     marginTop: theme.spacing.lg,
-    letterSpacing: theme.typography.letterSpacing.wide,
+    letterSpacing: theme.typography.letterSpacing.extraWide,
+    fontFamily: theme.typography.fonts.primary.medium,
   },
 });

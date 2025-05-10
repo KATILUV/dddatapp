@@ -263,66 +263,55 @@ const AnimatedOrb = ({
         />
       )}
       
-      {/* Main orb with 3D effect */}
+      {/* Simplified face-like shape similar to the reference logo */}
       <View style={styles.orbContainer}>
-        <LinearGradient
-          colors={orbColors}
-          style={[
-            styles.orb,
+        <View style={[
+          styles.outlineShape,
+          {
+            width: orbSize * 0.7,
+            height: orbSize,
+            borderRadius: orbSize / 2,
+            borderWidth: 2,
+            borderColor: theme.colors.accent.primary,
+          }
+        ]}>
+          {/* Left eye */}
+          <View style={[
+            styles.eyeShape,
             {
-              width: orbSize,
-              height: orbSize,
-              borderRadius: orbSize / 2,
-            },
-          ]}
-          start={{ x: 0.1, y: 0.1 }}
-          end={{ x: 0.9, y: 0.9 }}
-        >
-          {/* Primary highlight - top left */}
-          <View
-            style={[
-              styles.innerHighlight,
-              {
-                width: orbSize * 0.35,
-                height: orbSize * 0.35,
-                borderRadius: orbSize * 0.35,
-                top: orbSize * 0.12,
-                left: orbSize * 0.12,
-                opacity: 0.4,
-              },
-            ]}
-          />
+              width: orbSize * 0.12,
+              height: orbSize * 0.12,
+              borderRadius: orbSize * 0.06,
+              top: orbSize * 0.25,
+              left: orbSize * 0.18,
+            }
+          ]} />
           
-          {/* Secondary highlight - adds 3D effect */}
-          <View
-            style={[
-              styles.innerHighlight,
-              {
-                width: orbSize * 0.2,
-                height: orbSize * 0.2,
-                borderRadius: orbSize * 0.2,
-                top: orbSize * 0.18,
-                left: orbSize * 0.18,
-                opacity: 0.8,
-              },
-            ]}
-          />
+          {/* Right eye */}
+          <View style={[
+            styles.eyeShape,
+            {
+              width: orbSize * 0.12,
+              height: orbSize * 0.12,
+              borderRadius: orbSize * 0.06,
+              top: orbSize * 0.25,
+              right: orbSize * 0.18,
+            }
+          ]} />
           
-          {/* Shadow gradient for 3D effect */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0, 0, 0, 0.4)']}
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: orbSize * 0.7,
-              height: orbSize * 0.7,
-              borderRadius: orbSize * 0.7,
-            }}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </LinearGradient>
+          {/* Smile */}
+          <View style={[
+            styles.smileShape,
+            {
+              width: orbSize * 0.35,
+              height: orbSize * 0.3,
+              borderBottomLeftRadius: orbSize * 0.3,
+              borderBottomRightRadius: orbSize * 0.3,
+              bottom: orbSize * 0.25,
+              alignSelf: 'center',
+            }
+          ]} />
+        </View>
       </View>
     </Animated.View>
   );
@@ -353,19 +342,33 @@ const styles = StyleSheet.create({
   orbContainer: {
     shadowColor: theme.colors.accent.glow,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.5,
     shadowRadius: 10,
-    elevation: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  orb: {
+  outlineShape: {
     position: 'relative',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 2,
+    borderColor: theme.colors.accent.primary,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  innerHighlight: {
+  eyeShape: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: theme.colors.accent.primary,
+    borderRadius: 5,
+  },
+  smileShape: {
+    position: 'absolute',
+    borderTopWidth: 0,
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: theme.colors.accent.primary,
+    backgroundColor: 'transparent',
   },
 });
 
