@@ -1,714 +1,534 @@
 /**
- * Insights Dashboard screen to display user data insights and analytics
+ * Insights Dashboard Screen
+ * Main screen for viewing, creating, and managing insights
  */
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  StyleSheet,
   View,
   Text,
+  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Animated,
-  Platform,
-  Alert,
+  RefreshControl,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 import GradientBackground from '../components/GradientBackground';
 import GlassmorphicCard from '../components/GlassmorphicCard';
 import Button from '../components/Button';
-import AnimatedOrb from '../components/AnimatedOrb';
-import EmotionalTrendChart from '../components/EmotionalTrendChart';
-import CreativeThemesChart from '../components/CreativeThemesChart';
-import BehavioralLoopsChart from '../components/BehavioralLoopsChart';
-import theme from '../theme';
-import { fadeInUp } from '../utils/animations';
-import { getData } from '../utils/storage';
-import openaiService from '../services/openai';
-import api from '../services/api';
+import InsightGenerator from '../components/InsightGenerator';
+import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 
 /**
- * Insights Dashboard screen component
+ * Format relative time
+ * @param {string} dateString - ISO date string
+ * @returns {string} Relative time string (e.g., "2 hours ago")
+ */
+const getRelativeTime = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  
+  if (diffDay > 0) {
+    return diffDay === 1 ? '1 day ago' : `${diffDay} days ago`;
+  }
+  if (diffHour > 0) {
+    return diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
+  }
+  if (diffMin > 0) {
+    return diffMin === 1 ? '1 minute ago' : `${diffMin} minutes ago`;
+  }
+  return 'Just now';
+};
+
+/**
+ * InsightsDashboardScreen component
  * @returns {React.ReactElement} - Rendered component
  */
-const InsightsDashboardScreen = ({ navigation }) => {
+export default function InsightsDashboardScreen({ navigation }) {
+  const { user } = useAuth();
   const [insights, setInsights] = useState([]);
-  const [hasData, setHasData] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [isGeneratorVisible, setIsGeneratorVisible] = useState(false);
+  const [selectedInsight, setSelectedInsight] = useState(null);
+  const [isInsightModalVisible, setIsInsightModalVisible] = useState(false);
   
-  // Animation styles
-  const headerAnim = fadeInUp(100);
-  const contentAnim = fadeInUp(300);
-  
-  // State for loading indicator
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
-  // Analyze data sources using OpenAI
-  const analyzeDataSources = async (dataSources) => {
+  // Fetch insights from API
+  const fetchInsights = useCallback(async () => {
     try {
-      setIsAnalyzing(true);
+      setIsLoading(true);
+      setError(null);
       
-      // Placeholder for actual data processing
-      // In a real app, we would extract and format data from the sources
-      const processedData = dataSources.map(source => ({
-        type: source.sourceType,
-        fileName: source.fileName,
-        uploadDate: source.uploadDate,
-        // This would contain actual content in a real app
-        sampleContent: `Sample content from ${source.fileName} for demonstration purposes.`
-      }));
-      
-      // Check if OpenAI API key is configured
-      if (!process.env.OPENAI_API_KEY) {
-        // Use default insights if no API key
-        return [
-          {
-            id: 'insight-1',
-            title: 'Digital Wellness',
-            description: 'Your screen time has decreased by 22% compared to last month.',
-            category: 'wellness',
-            date: new Date().toISOString(),
-            icon: 'trending-down',
-            color: theme.colors.success.default,
-            emotionalData: [] // Would be populated with real data in production
-          },
-          {
-            id: 'insight-2',
-            title: 'Content Preferences',
-            description: 'You engage 3x more with creative content than news content.',
-            category: 'preferences',
-            date: new Date().toISOString(),
-            icon: 'star',
-            color: theme.colors.warning.default,
-            themesData: [] // Would be populated with real data in production
-          },
-          {
-            id: 'insight-3',
-            title: 'Communication Patterns',
-            description: 'Your most active communication hours are between 2-4 PM.',
-            category: 'communication',
-            date: new Date().toISOString(),
-            icon: 'chatbubbles',
-            color: theme.colors.accent.primary,
-            patternsData: [] // Would be populated with real data in production
-          },
-        ];
-      }
-      
-      try {
-        // Try to get insights from OpenAI
-        // This would be fully implemented with real data in production
-        
-        // Get emotional trends analysis
-        // const emotionalAnalysis = await openaiService.analyzeEmotionalTrends(processedData);
-        
-        // Get creative themes analysis
-        // const themesAnalysis = await openaiService.identifyCreativeThemes(processedData);
-        
-        // Get behavioral patterns analysis
-        // const patternsAnalysis = await openaiService.detectBehavioralPatterns(processedData);
-        
-        // For now, use the default insights but in production would use OpenAI results
-        return [
-          {
-            id: 'insight-1',
-            title: 'Digital Wellness',
-            description: 'Your screen time has decreased by 22% compared to last month.',
-            category: 'wellness',
-            date: new Date().toISOString(),
-            icon: 'trending-down',
-            color: theme.colors.success.default,
-            emotionalData: [] // Would come from emotionalAnalysis in production
-          },
-          {
-            id: 'insight-2',
-            title: 'Content Preferences',
-            description: 'You engage 3x more with creative content than news content.',
-            category: 'preferences',
-            date: new Date().toISOString(),
-            icon: 'star',
-            color: theme.colors.warning.default,
-            themesData: [] // Would come from themesAnalysis in production
-          },
-          {
-            id: 'insight-3',
-            title: 'Communication Patterns',
-            description: 'Your most active communication hours are between 2-4 PM.',
-            category: 'communication',
-            date: new Date().toISOString(),
-            icon: 'chatbubbles',
-            color: theme.colors.accent.primary,
-            patternsData: [] // Would come from patternsAnalysis in production
-          },
-        ];
-      } catch (error) {
-        console.error('Error analyzing data with OpenAI:', error);
-        Alert.alert(
-          "Analysis Error",
-          "There was an error analyzing your data. Please check your internet connection and API configuration.",
-          [{ text: "OK" }]
-        );
-        
-        // Return default insights if OpenAI analysis fails
-        return [
-          {
-            id: 'insight-1',
-            title: 'Digital Wellness',
-            description: 'Your screen time has decreased by 22% compared to last month.',
-            category: 'wellness',
-            date: new Date().toISOString(),
-            icon: 'trending-down',
-            color: theme.colors.success.default,
-          },
-          {
-            id: 'insight-2',
-            title: 'Content Preferences',
-            description: 'You engage 3x more with creative content than news content.',
-            category: 'preferences',
-            date: new Date().toISOString(),
-            icon: 'star',
-            color: theme.colors.warning.default,
-          },
-          {
-            id: 'insight-3',
-            title: 'Communication Patterns',
-            description: 'Your most active communication hours are between 2-4 PM.',
-            category: 'communication',
-            date: new Date().toISOString(),
-            icon: 'chatbubbles',
-            color: theme.colors.accent.primary,
-          },
-        ];
-      }
-    } catch (error) {
-      console.error('Error analyzing data sources:', error);
-      return [];
+      const response = await api.get('/api/insights');
+      setInsights(response.data);
+    } catch (err) {
+      console.error('Error fetching insights:', err);
+      setError('Failed to load insights. Please try again later.');
     } finally {
-      setIsAnalyzing(false);
+      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    // Fetch data sources and insights from API
-    const fetchData = async () => {
-      try {
-        setIsAnalyzing(true);
-        
-        // Fetch data sources directly from our basic server
-        const sourcesResponse = await fetch('/api/data-sources');
-        if (!sourcesResponse.ok) {
-          throw new Error('Failed to fetch data sources');
-        }
-        const dataSources = await sourcesResponse.json();
-        const hasDataSources = dataSources && dataSources.length > 0;
-        setHasData(hasDataSources);
-        
-        // Fetch insights directly from our basic server
-        const insightsResponse = await fetch('/api/insights');
-        if (!insightsResponse.ok) {
-          throw new Error('Failed to fetch insights');
-        }
-        const insightsData = await insightsResponse.json();
-        
-        if (insightsData && insightsData.length > 0) {
-          // Use the insights as they are (our backend already formats them correctly)
-          setInsights(insightsData);
-        } else if (hasDataSources && dataSources.length >= 2) {
-          // If we have enough data sources but no insights, we'll let the user generate manually
-          console.log('No insights found but data sources exist, ready for generation');
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        
-        // If API fails, show empty state with generate option
-        setIsAnalyzing(false);
-        
-        // Check if we at least have data sources
-        try {
-          const sourcesResponse = await fetch('/api/data-sources');
-          if (sourcesResponse.ok) {
-            const dataSources = await sourcesResponse.json();
-            setHasData(dataSources && dataSources.length > 0);
-          }
-        } catch (dataError) {
-          console.error('Error checking data sources:', dataError);
-          setHasData(false);
-        }
-      } finally {
-        setIsAnalyzing(false);
-      }
-    };
-    
-    fetchData();
   }, []);
   
-  // Generate a new insight using OpenAI
-  const generateNewInsight = async () => {
-    setIsAnalyzing(true);
+  // Initial data loading
+  useEffect(() => {
+    fetchInsights();
+  }, [fetchInsights]);
+  
+  // Handle refresh
+  const handleRefresh = () => {
+    fetchInsights();
+  };
+  
+  // Show insight detail
+  const handleShowInsight = (insight) => {
+    setSelectedInsight(insight);
+    setIsInsightModalVisible(true);
+  };
+  
+  // Handle new insight generated
+  const handleInsightGenerated = (insight, shouldSave = false) => {
+    // Add the new insight to the list
+    setInsights(prevInsights => [insight, ...prevInsights]);
     
-    try {
-      // Get user's data sources
-      const response = await fetch('/api/data-sources');
-      if (!response.ok) {
-        throw new Error('Failed to fetch data sources');
-      }
-      const dataSources = await response.json();
-      
-      // Prepare data samples (in a real app, these would be actual data from the sources)
-      const dataSamples = [
-        "User frequently posts about technology topics, especially AI and machine learning.",
-        "Communication patterns show increased activity in the evenings, particularly between 8-10pm.",
-        "Content creation focuses on educational and informative material rather than entertainment.",
-        "Search history indicates strong interest in productivity tools and time management techniques.",
-        "Reading patterns show preference for in-depth technical articles over news summaries."
-      ];
-      
-      // Call the OpenAI-powered insight generation endpoint
-      const insightResponse = await fetch('/api/generate-insight', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          dataSamples,
-          dataTypes: dataSources.map(source => source.sourceType),
-          userId: '1', // In a real app, this would be the actual user ID
-        }),
-      });
-      
-      if (!insightResponse.ok) {
-        throw new Error('Failed to generate insight');
-      }
-      
-      // Parse the generated insight
-      const newInsight = await insightResponse.json();
-      
-      // Add to insights state
-      setInsights([newInsight, ...insights]);
-      
-      // Alert user
-      Alert.alert(
-        "New Insight Generated",
-        "A personalized insight has been generated based on your data.",
-        [{ text: "OK" }]
-      );
-    } catch (error) {
-      console.error('Error generating insight:', error);
-      Alert.alert(
-        "Error",
-        "Failed to generate a new insight. Please try again later.",
-        [{ text: "OK" }]
-      );
-    } finally {
-      setIsAnalyzing(false);
+    // Close the generator
+    if (shouldSave) {
+      setIsGeneratorVisible(false);
     }
   };
-
-  const renderPlaceholder = () => (
-    <Animated.View style={[styles.placeholder, contentAnim]}>
-      <AnimatedOrb size="small" enhanced3d glow />
-      <Text style={styles.placeholderTitle}>No Insights Yet</Text>
-      <Text style={styles.placeholderText}>
-        Upload your data from social media, notes, or other sources to see personalized insights.
-      </Text>
-      <View style={styles.placeholderButtonsContainer}>
-        <Button
-          title="Add Data"
-          onPress={() => navigation.navigate('DataConnection')}
-          variant="primary"
-          iconRight="cloud-upload"
-          style={styles.placeholderButton}
-        />
-        <Button
-          title="Generate Demo Insight"
-          onPress={generateNewInsight}
-          variant="outline"
-          iconRight="analytics"
-          style={styles.placeholderButton}
-        />
-      </View>
-    </Animated.View>
-  );
   
-  // Track which insights are expanded
-  const [expandedInsights, setExpandedInsights] = useState({});
-  
-  // Handle expanding/collapsing an insight
-  const toggleInsightExpanded = (insightId) => {
-    setExpandedInsights(prev => ({
-      ...prev,
-      [insightId]: !prev[insightId]
-    }));
-  };
-  
-  // Render an insight card with expandable detailed visualizations
-  const renderInsightCard = (insight) => {
-    const isExpanded = expandedInsights[insight.id] || false;
-    
-    // Format insight date nicely
-    const formattedDate = new Date(insight.date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-    
-    // Use background opacity for the icon background
-    const iconBgColor = insight.color && insight.color.startsWith('#') 
-      ? `${insight.color}20` 
-      : 'rgba(124, 77, 255, 0.2)'; // Fallback color with opacity
-    
-    // Ensure we have valid values for all properties
-    const safeInsight = {
-      ...insight,
-      category: insight.category || 'general',
-      icon: insight.icon || 'analytics',
-      color: insight.color || theme.colors.accent.primary
+  // Get data source name
+  const getSourceName = (sourceId) => {
+    const sources = {
+      'journal': 'Journal',
+      'health': 'Health Metrics',
+      'social': 'Social Media',
+      'ai-template': 'AI Analysis',
+      'multi-source': 'Multiple Sources'
     };
     
+    return sources[sourceId] || 'Unknown Source';
+  };
+  
+  // Get icon for insight type
+  const getInsightTypeIcon = (type) => {
+    const icons = {
+      'pattern': 'ios-analytics-outline',
+      'correlation': 'ios-git-compare-outline',
+      'generated': 'ios-sparkles-outline',
+      'complex': 'ios-grid-outline'
+    };
+    
+    return icons[type] || 'ios-document-text-outline';
+  };
+  
+  // Render an insight card
+  const renderInsightCard = (insight) => {
     return (
-      <GlassmorphicCard key={safeInsight.id} style={styles.insightCard}>
-        <View style={styles.insightHeader}>
-          <View style={[styles.insightIcon, { backgroundColor: iconBgColor }]}>
-            <Ionicons name={safeInsight.icon} size={22} color={safeInsight.color} />
-          </View>
-          <Text style={styles.insightCategory}>{safeInsight.category.toUpperCase()}</Text>
-          <Text style={styles.insightDate}>{formattedDate}</Text>
-        </View>
-        
-        <Text style={styles.insightTitle}>{safeInsight.title}</Text>
-        <Text style={styles.insightDescription}>{safeInsight.description}</Text>
-        
-        <View style={styles.insightFooter}>
-          <TouchableOpacity 
-            style={styles.insightActionButton}
-            onPress={() => toggleInsightExpanded(insight.id)}
-          >
-            <Text style={styles.insightActionText}>
-              {isExpanded ? 'Show Less' : 'Explore Further'}
+      <TouchableOpacity
+        key={insight.id}
+        onPress={() => handleShowInsight(insight)}
+        style={styles.insightCardContainer}
+      >
+        <GlassmorphicCard style={styles.insightCard}>
+          <View style={styles.insightHeader}>
+            <View style={styles.insightSource}>
+              <Ionicons 
+                name={getInsightTypeIcon(insight.type)} 
+                size={16} 
+                color="rgba(255, 255, 255, 0.8)" 
+              />
+              <Text style={styles.sourceText}>
+                {getSourceName(insight.source)}
+              </Text>
+            </View>
+            <Text style={styles.timeText}>
+              {getRelativeTime(insight.timestamp)}
             </Text>
-            <Ionicons 
-              name={isExpanded ? "chevron-up" : "chevron-forward"} 
-              size={16} 
-              color={theme.colors.accent.primary} 
-            />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Expanded visualization section */}
-        {isExpanded && (
-          <View style={styles.expandedContent}>
-            {insight.category === 'wellness' && (
-              <EmotionalTrendChart 
-                primaryEmotion="joy"
-                // In a real app, we would pass actual emotional data here
-              />
-            )}
-            
-            {insight.category === 'preferences' && (
-              <CreativeThemesChart 
-                // In a real app, we would pass actual theme data here
-              />
-            )}
-            
-            {insight.category === 'communication' && (
-              <BehavioralLoopsChart 
-                // In a real app, we would pass actual behavioral data here
-              />
-            )}
           </View>
-        )}
-      </GlassmorphicCard>
+          
+          <Text style={styles.insightTitle}>{insight.title}</Text>
+          
+          <Text 
+            style={styles.insightPreview}
+            numberOfLines={3}
+            ellipsizeMode="tail"
+          >
+            {insight.content}
+          </Text>
+          
+          <View style={styles.insightFooter}>
+            <Text style={styles.readMoreText}>Read more</Text>
+            <Ionicons name="chevron-forward" size={16} color="#a388ff" />
+          </View>
+        </GlassmorphicCard>
+      </TouchableOpacity>
     );
   };
   
-  const renderCategories = () => (
-    <View style={styles.categoriesRow}>
-      <TouchableOpacity style={styles.categoryChip}>
-        <Text style={styles.categoryChipText}>All</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={[styles.categoryChip, styles.categoryChipInactive]}>
-        <Text style={styles.categoryChipTextInactive}>Wellness</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={[styles.categoryChip, styles.categoryChipInactive]}>
-        <Text style={styles.categoryChipTextInactive}>Preferences</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={[styles.categoryChip, styles.categoryChipInactive]}>
-        <Text style={styles.categoryChipTextInactive}>More</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  // Render insight detail modal
+  const renderInsightModal = () => {
+    if (!selectedInsight) return null;
+    
+    return (
+      <Modal
+        visible={isInsightModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsInsightModalVisible(false)}
+      >
+        <BlurView intensity={80} style={styles.modalContainer}>
+          <LinearGradient
+            colors={['rgba(30, 15, 60, 0.9)', 'rgba(10, 5, 30, 0.95)']}
+            style={styles.modalContent}
+          >
+            <View style={styles.modalHeader}>
+              <TouchableOpacity 
+                onPress={() => setIsInsightModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#ffffff" />
+              </TouchableOpacity>
+              
+              <View style={styles.insightSource}>
+                <Ionicons 
+                  name={getInsightTypeIcon(selectedInsight.type)} 
+                  size={18} 
+                  color="rgba(255, 255, 255, 0.8)" 
+                />
+                <Text style={styles.sourceText}>
+                  {getSourceName(selectedInsight.source)}
+                </Text>
+              </View>
+              
+              <Text style={styles.modalTitle}>{selectedInsight.title}</Text>
+              
+              <Text style={styles.insightDate}>
+                {new Date(selectedInsight.timestamp).toLocaleString()}
+              </Text>
+            </View>
+            
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.insightContent}>
+                {selectedInsight.content}
+              </Text>
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.footerButton}>
+                <Ionicons name="share-outline" size={20} color="#a388ff" />
+                <Text style={styles.footerButtonText}>Share</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.footerButton}>
+                <Ionicons name="document-text-outline" size={20} color="#a388ff" />
+                <Text style={styles.footerButtonText}>Export</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.footerButton}>
+                <Ionicons name="bookmark-outline" size={20} color="#a388ff" />
+                <Text style={styles.footerButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </BlurView>
+      </Modal>
+    );
+  };
+  
+  // Render the insight generator modal
+  const renderInsightGenerator = () => {
+    return (
+      <Modal
+        visible={isGeneratorVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsGeneratorVisible(false)}
+      >
+        <BlurView intensity={80} style={styles.modalContainer}>
+          <LinearGradient
+            colors={['rgba(30, 15, 60, 0.9)', 'rgba(10, 5, 30, 0.95)']}
+            style={styles.generatorModalContent}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Generate Insight</Text>
+              <TouchableOpacity 
+                onPress={() => setIsGeneratorVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalBody}>
+              <InsightGenerator
+                userData={{}}  // This would contain real user data from sources
+                onInsightGenerated={handleInsightGenerated}
+                onError={(err) => console.error(err)}
+              />
+            </ScrollView>
+          </LinearGradient>
+        </BlurView>
+      </Modal>
+    );
+  };
   
   return (
     <GradientBackground>
       <View style={styles.container}>
-        <Animated.View style={[styles.header, headerAnim]}>
-          <Text style={styles.headerTitle}>INSIGHTS</Text>
-        </Animated.View>
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Insights</Text>
+            <Text style={styles.subtitle}>
+              Personalized understanding of your data
+            </Text>
+          </View>
+          
+          <Button
+            title="New Insight"
+            variant="primary"
+            size="small"
+            iconLeft="add"
+            onPress={() => setIsGeneratorVisible(true)}
+          />
+        </View>
         
         <ScrollView
-          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={handleRefresh}
+              tintColor="#a388ff"
+              colors={["#a388ff"]}
+            />
+          }
         >
-          {isAnalyzing ? (
-            <View style={styles.loadingContainer}>
-              <AnimatedOrb size="small" enhanced3d glow pulse />
-              <Text style={styles.loadingText}>
-                Analyzing your data for insights...
-              </Text>
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={24} color="#ff6b6b" />
+              <Text style={styles.errorText}>{error}</Text>
+              <Button
+                title="Retry"
+                variant="outline"
+                size="small"
+                onPress={handleRefresh}
+                style={styles.retryButton}
+              />
             </View>
-          ) : hasData ? (
-            <Animated.View style={contentAnim}>
-              <Text style={styles.introText}>
-                Personalized analytics based on your data
+          ) : insights.length === 0 && !isLoading ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="bulb-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
+              <Text style={styles.emptyText}>
+                No insights yet. Connect your data sources and generate your first insight.
               </Text>
-              
-              {renderCategories()}
-              
-              <View style={styles.insightsContainer}>
-                {insights.map(renderInsightCard)}
-              </View>
-              
-              <View style={styles.suggestionSection}>
-                <Text style={styles.sectionTitle}>SUGGESTED ACTIONS</Text>
-                
-                <GlassmorphicCard style={styles.suggestionCard}>
-                  <View style={styles.suggestionContent}>
-                    <Ionicons name="analytics" size={22} color={theme.colors.accent.primary} />
-                    <Text style={styles.suggestionText}>Generate a new insight from your data</Text>
-                  </View>
-                  <Button
-                    title="Generate"
-                    onPress={generateNewInsight}
-                    variant="outline"
-                    size="small"
-                    isLoading={isAnalyzing}
-                  />
-                </GlassmorphicCard>
-                
-                <GlassmorphicCard style={styles.suggestionCard}>
-                  <View style={styles.suggestionContent}>
-                    <Ionicons name="add-circle" size={22} color={theme.colors.accent.primary} />
-                    <Text style={styles.suggestionText}>Upload more data for deeper insights</Text>
-                  </View>
-                  <Button
-                    title="Add Data"
-                    onPress={() => navigation.navigate('DataConnection')}
-                    variant="outline"
-                    size="small"
-                  />
-                </GlassmorphicCard>
-                
-                <GlassmorphicCard style={styles.suggestionCard}>
-                  <View style={styles.suggestionContent}>
-                    <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.accent.primary} />
-                    <Text style={styles.suggestionText}>Ask Solstice about these insights</Text>
-                  </View>
-                  <Button
-                    title="Chat"
-                    onPress={() => navigation.navigate('Chat')}
-                    variant="outline"
-                    size="small"
-                  />
-                </GlassmorphicCard>
-              </View>
-            </Animated.View>
-          ) : renderPlaceholder()}
+              <Button
+                title="Generate New Insight"
+                variant="primary"
+                iconLeft="sparkles-outline"
+                onPress={() => setIsGeneratorVisible(true)}
+                style={styles.emptyButton}
+              />
+            </View>
+          ) : (
+            <View style={styles.insightsGrid}>
+              {insights.map(insight => renderInsightCard(insight))}
+            </View>
+          )}
         </ScrollView>
+        
+        {renderInsightModal()}
+        {renderInsightGenerator()}
       </View>
     </GradientBackground>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 60,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    ...theme.typography.styles.h3,
-    color: theme.colors.text.primary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    textTransform: 'uppercase',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxxl,
-  },
-  introText: {
-    ...theme.typography.styles.bodyRegular,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-  },
-  categoriesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.lg,
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  categoryChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    backgroundColor: 'rgba(168, 148, 255, 0.15)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.accent.primary,
+  titleContainer: {
+    flex: 1,
   },
-  categoryChipInactive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 1,
   },
-  categoryChipText: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.accent.primary,
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 5,
   },
-  categoryChipTextInactive: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.secondary,
+  scrollContent: {
+    paddingBottom: 80,
   },
-  insightsContainer: {
-    marginBottom: theme.spacing.xl,
+  insightsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  insightCardContainer: {
+    width: '100%',
+    marginBottom: 15,
   },
   insightCard: {
-    marginBottom: theme.spacing.md,
+    padding: 15,
   },
   insightHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-    width: '100%',
-    justifyContent: 'flex-start',
+    marginBottom: 10,
   },
-  insightIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
+  insightSource: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: theme.spacing.sm,
   },
-  insightCategory: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
-    letterSpacing: theme.typography.letterSpacing.wide,
+  sourceText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 5,
   },
-  insightDate: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
-    marginLeft: 'auto',
+  timeText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   insightTitle: {
-    ...theme.typography.styles.h4,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
-  insightDescription: {
-    ...theme.typography.styles.bodyRegular,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.md,
+  insightPreview: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 20,
+    marginBottom: 10,
   },
   insightFooter: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: theme.spacing.sm,
-  },
-  insightActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  insightActionText: {
-    ...theme.typography.styles.bodySmall,
-    color: theme.colors.accent.primary,
-    marginRight: theme.spacing.xs,
+  readMoreText: {
+    fontSize: 14,
+    color: '#a388ff',
+    marginRight: 5,
   },
-  expandedContent: {
-    marginTop: theme.spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: theme.spacing.md,
-  },
-  sectionTitle: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.text.tertiary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    marginBottom: theme.spacing.sm,
-  },
-  suggestionSection: {
-    marginTop: theme.spacing.lg,
-  },
-  suggestionCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  errorContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    borderRadius: 10,
+    padding: 20,
+    marginTop: 20,
   },
-  suggestionContent: {
-    flexDirection: 'row',
+  errorText: {
+    color: '#ff6b6b',
+    marginVertical: 10,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 10,
+  },
+  emptyContainer: {
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
+    marginTop: 50,
+    padding: 20,
   },
-  suggestionText: {
-    ...theme.typography.styles.bodyRegular,
-    color: theme.colors.text.primary,
-    marginLeft: theme.spacing.sm,
-    flex: 1,
+  emptyText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    marginVertical: 20,
+    lineHeight: 22,
   },
-  placeholder: {
+  emptyButton: {
+    marginTop: 20,
+  },
+  modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.xxl,
   },
-  placeholderTitle: {
-    ...theme.typography.styles.h3,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.md,
+  modalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
   },
-  placeholderText: {
-    ...theme.typography.styles.bodyRegular,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  placeholderButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  generatorModalContent: {
     width: '100%',
-    marginTop: theme.spacing.md,
+    height: '100%',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  placeholderButton: {
-    flex: 1,
-    marginHorizontal: theme.spacing.xs,
+  modalHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+    marginBottom: 5,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    padding: 5,
+  },
+  insightDate: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  insightContent: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 24,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  footerButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xxl,
+    padding: 10,
   },
-  loadingText: {
-    ...theme.typography.styles.bodyRegular,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.lg,
-    textAlign: 'center',
+  footerButtonText: {
+    color: '#a388ff',
+    marginLeft: 5,
+    fontSize: 14,
   },
 });
-
-export default InsightsDashboardScreen;

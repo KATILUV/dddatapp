@@ -1,155 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenAI Integration Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #121212;
-            color: #fff;
-        }
-        h1, h2 {
-            color: #7c4dff;
-        }
-        button {
-            background-color: #7c4dff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 10px 0;
-        }
-        button:hover {
-            background-color: #6c3cee;
-        }
-        pre {
-            background-color: #1e1e1e;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-            color: #e0e0e0;
-        }
-        .card {
-            background-color: #1e1e1e;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .loading {
-            display: none;
-            color: #7c4dff;
-            margin: 10px 0;
-        }
-        .error {
-            color: #ff5252;
-            background-color: rgba(255, 82, 82, 0.1);
-            padding: 10px;
-            border-radius: 4px;
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solstice - Test OpenAI Integration</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #1e0f3c 0%, #0a051e 100%);
+      color: #fff;
+      margin: 0;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+    
+    p {
+      margin-bottom: 20px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    textarea, select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.2);
+      color: #fff;
+      margin-bottom: 15px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    
+    button {
+      background: #7b61ff;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    
+    button:hover {
+      background: #6a50e0;
+    }
+    
+    button:disabled {
+      background: #4a3b9c;
+      cursor: not-allowed;
+    }
+    
+    .result {
+      white-space: pre-wrap;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 5px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .error {
+      color: #ff6b6b;
+      padding: 10px;
+      background: rgba(255, 107, 107, 0.1);
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 20px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .loading::after {
+      content: "...";
+      animation: dots 1.5s steps(5, end) infinite;
+    }
+    
+    @keyframes dots {
+      0%, 20% { content: "."; }
+      40% { content: ".."; }
+      60%, 100% { content: "..."; }
+    }
+    
+    .templates {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .template-option {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+      padding: 10px 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .template-option:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .template-option.selected {
+      background: rgba(123, 97, 255, 0.3);
+      border-color: rgba(123, 97, 255, 0.5);
+    }
+  </style>
 </head>
 <body>
-    <h1>OpenAI Integration Test</h1>
+  <div class="container">
+    <h1>Solstice - OpenAI Template Test</h1>
+    <p>Use this page to test the OpenAI integration with different templates.</p>
     
     <div class="card">
-        <h2>Generate Insight</h2>
-        <button id="generateInsight">Generate New Insight</button>
-        <div id="insightLoading" class="loading">Generating insight with OpenAI... (this may take up to 15 seconds)</div>
-        <div id="insightError" class="error"></div>
-        <h3>Response:</h3>
-        <pre id="insightResult">No data yet. Click the button above to generate an insight.</pre>
+      <h2>Template Selection</h2>
+      <div class="templates">
+        <div class="template-option selected" data-template="daily-reflection">Daily Reflection</div>
+        <div class="template-option" data-template="health-patterns">Health Patterns</div>
+        <div class="template-option" data-template="creative-themes">Creative Themes</div>
+        <div class="template-option" data-template="productivity-insights">Productivity Insights</div>
+        <div class="template-option" data-template="social-patterns">Social Interaction Patterns</div>
+      </div>
+      
+      <div class="template-details">
+        <h3>Template: <span id="template-name">Daily Reflection</span></h3>
+        <p id="template-description">Analyze your day and identify patterns in activities, mood, and energy levels</p>
+      </div>
     </div>
     
     <div class="card">
-        <h2>All Insights</h2>
-        <button id="fetchInsights">Fetch All Insights</button>
-        <div id="insightsLoading" class="loading">Fetching insights...</div>
-        <div id="insightsError" class="error"></div>
-        <h3>Response:</h3>
-        <pre id="insightsResult">No data yet. Click the button above to fetch insights.</pre>
+      <h2>Test Data</h2>
+      
+      <label for="activities">Activities:</label>
+      <textarea id="activities" rows="3">Morning: 30 minute run, Work from 9am-5pm, Evening: reading for 1 hour
+Afternoon: meeting with team, coffee break, focused coding session
+Evening: dinner with family, watched a documentary</textarea>
+      
+      <label for="mood">Mood:</label>
+      <textarea id="mood" rows="3">Morning: energetic and positive
+Afternoon: focused but slightly tired
+Evening: relaxed and content</textarea>
+      
+      <label for="energy-level">Energy Level:</label>
+      <textarea id="energy-level" rows="3">Morning: 8/10
+Afternoon: 6/10
+Evening: 4/10</textarea>
+      
+      <label for="sleep">Sleep:</label>
+      <textarea id="sleep" rows="2">7.5 hours, went to bed at 11pm, woke up once during the night, woke up at 6:30am</textarea>
+      
+      <label for="notes">Notes:</label>
+      <textarea id="notes" rows="2">Felt accomplished with work tasks. Need to manage afternoon energy dip better.</textarea>
+      
+      <button id="generate-btn">Generate Insight</button>
     </div>
-
-    <script>
-        document.getElementById('generateInsight').addEventListener('click', async () => {
-            const resultElement = document.getElementById('insightResult');
-            const loadingElement = document.getElementById('insightLoading');
-            const errorElement = document.getElementById('insightError');
-            
-            loadingElement.style.display = 'block';
-            errorElement.style.display = 'none';
-            errorElement.textContent = '';
-            
-            // Sample data - in a real app, this would come from user data
-            const dataSamples = [
-                "User frequently posts about technology topics, especially AI and machine learning.",
-                "Communication patterns show increased activity in the evenings, particularly between 8-10pm.",
-                "Content creation focuses on educational and informative material rather than entertainment.",
-                "Search history indicates strong interest in productivity tools and time management techniques.",
-                "Reading patterns show preference for in-depth technical articles over news summaries."
-            ];
-            
-            try {
-                const response = await fetch('/api/generate-insight', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        dataSamples,
-                        dataTypes: ['google', 'twitter', 'notes'],
-                        userId: '1',
-                    }),
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Error: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                resultElement.textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                console.error('Error generating insight:', error);
-                errorElement.textContent = `Error: ${error.message}`;
-                errorElement.style.display = 'block';
-            } finally {
-                loadingElement.style.display = 'none';
-            }
+    
+    <div class="loading hidden" id="loading">Generating insight</div>
+    <div class="error hidden" id="error"></div>
+    
+    <div class="card hidden" id="result-card">
+      <h2>Generated Insight</h2>
+      <div class="result" id="result"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Template definitions
+    const templates = {
+      'daily-reflection': {
+        name: 'Daily Reflection',
+        description: 'Analyze your day and identify patterns in activities, mood, and energy levels',
+        systemPrompt: 'You are a perceptive and empathetic AI companion helping users understand patterns in their daily activities, mood, and energy levels. Focus on identifying connections between behaviors and outcomes, highlighting potential areas for optimization. Be supportive and encouraging, offering practical suggestions while respecting the user\'s autonomy. Write in a conversational, friendly tone as if you were a caring friend.',
+        promptTemplate: 'Based on the following daily data, please provide a thoughtful reflection about patterns, insights, and gentle suggestions:\n\nActivities: {{activities}}\nMood: {{mood}}\nEnergy Level: {{energyLevel}}\nSleep: {{sleep}}\nNotes: {{notes}}\n\nPlease identify: 1) Activity-mood correlations, 2) Energy patterns, 3) One small suggestion for improvement',
+        requiredFields: ['activities', 'mood', 'energyLevel', 'sleep', 'notes']
+      },
+      'health-patterns': {
+        name: 'Health Patterns',
+        description: 'Analyze health data to identify patterns and potential improvements',
+        systemPrompt: 'You are a knowledgeable health insights companion helping users understand patterns in their health data. Focus on correlations between different health metrics, lifestyle choices, and outcomes. Provide evidence-based observations and suggestions, but be clear that you are not providing medical advice. Use a balanced, informative tone that empowers the user to make their own health decisions.',
+        promptTemplate: 'Based on the following health data, please analyze patterns and provide gentle insights:\n\nExercise: {{activities}}\nNutrition: {{notes}}\nSleep: {{sleep}}\nEnergy Levels: {{energyLevel}}\nMood: {{mood}}\n\nPlease identify: 1) Notable patterns, 2) Potential correlations between different metrics, 3) General well-being observations, and 4) Areas that might benefit from attention',
+        requiredFields: ['activities', 'notes', 'sleep', 'energyLevel', 'mood']
+      },
+      'creative-themes': {
+        name: 'Creative Themes',
+        description: 'Identify recurring themes and patterns in your creative work',
+        systemPrompt: 'You are an insightful creative analyst helping users identify themes, motifs, and patterns in their creative work. Focus on drawing connections between different pieces, highlighting evolving interests, and noting unique stylistic elements. Be encouraging and constructive, emphasizing the user\'s creative strengths while gently suggesting areas for exploration. Write in an inspired, thoughtful tone that sparks further creativity.',
+        promptTemplate: 'Based on the following creative work, please analyze the recurring themes, motifs, and stylistic elements:\n\nWork Samples: {{activities}}\nMedium/Format: Writing and daily activities\nTime Period: Recent days\nArtist\'s Notes: {{notes}}\n\nPlease identify: 1) Recurring themes or subjects, 2) Stylistic patterns and evolution, 3) Unique strengths, and 4) Potential directions for exploration',
+        requiredFields: ['activities', 'notes']
+      },
+      'productivity-insights': {
+        name: 'Productivity Insights',
+        description: 'Analyze your work patterns to optimize focus and efficiency',
+        systemPrompt: 'You are a perceptive productivity assistant helping users understand their work patterns, focus periods, and efficiency. Focus on identifying optimal working conditions, potential distractions, and strategies for improved productivity. Be practical and constructive, offering actionable suggestions tailored to the user\'s specific data. Write in a clear, direct tone that respects the user\'s time and goals.',
+        promptTemplate: 'Based on the following productivity data, please provide insights and practical suggestions:\n\nTasks Completed: {{activities}}\nWork Sessions: {{activities}}\nFocus Scores: {{energyLevel}}\nEnvironment: Based on daily patterns\nGoals: Improve productivity and energy management\n\nPlease identify: 1) Peak productivity patterns, 2) Potential focus disruptors, 3) Task efficiency insights, and 4) Specific, actionable suggestions for improvement',
+        requiredFields: ['activities', 'energyLevel']
+      },
+      'social-patterns': {
+        name: 'Social Interaction Patterns',
+        description: 'Analyze patterns in your social interactions and communications',
+        systemPrompt: 'You are an observant social insights companion helping users understand patterns in their social interactions and communications. Focus on identifying meaningful connection patterns, communication styles, and relationship dynamics. Be thoughtful and nuanced, acknowledging the complexity of human relationships. Write in a warm, considerate tone that respects the user\'s privacy and social preferences.',
+        promptTemplate: 'Based on the following social interaction data, please provide thoughtful insights:\n\nCommunications: {{activities}}\nSocial Events: {{activities}}\nRelationship Notes: {{notes}}\nEnergy Levels After Interactions: {{energyLevel}}\n\nPlease identify: 1) Patterns in social engagement, 2) Communication preferences and tendencies, 3) Relationship dynamics, and 4) Potential insights for more fulfilling connections',
+        requiredFields: ['activities', 'notes', 'energyLevel']
+      }
+    };
+    
+    // DOM elements
+    const templateOptions = document.querySelectorAll('.template-option');
+    const templateName = document.getElementById('template-name');
+    const templateDescription = document.getElementById('template-description');
+    const generateBtn = document.getElementById('generate-btn');
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const resultCard = document.getElementById('result-card');
+    const resultEl = document.getElementById('result');
+    
+    // Current template
+    let currentTemplate = 'daily-reflection';
+    
+    // Set up template selection
+    templateOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        // Update selection
+        templateOptions.forEach(opt => opt.classList.remove('selected'));
+        option.classList.add('selected');
+        
+        // Update current template
+        currentTemplate = option.dataset.template;
+        const template = templates[currentTemplate];
+        
+        // Update template details
+        templateName.textContent = template.name;
+        templateDescription.textContent = template.description;
+      });
+    });
+    
+    // Generate insight
+    generateBtn.addEventListener('click', async () => {
+      try {
+        // Show loading, hide previous results/errors
+        loadingEl.classList.remove('hidden');
+        errorEl.classList.add('hidden');
+        resultCard.classList.add('hidden');
+        generateBtn.disabled = true;
+        
+        // Get current template
+        const template = templates[currentTemplate];
+        
+        // Collect values from form
+        const data = {
+          activities: document.getElementById('activities').value,
+          mood: document.getElementById('mood').value,
+          energyLevel: document.getElementById('energy-level').value,
+          sleep: document.getElementById('sleep').value,
+          notes: document.getElementById('notes').value
+        };
+        
+        // Validate required fields
+        const missingFields = template.requiredFields.filter(field => {
+          const value = data[field];
+          return !value || value.trim() === '';
         });
         
-        document.getElementById('fetchInsights').addEventListener('click', async () => {
-            const resultElement = document.getElementById('insightsResult');
-            const loadingElement = document.getElementById('insightsLoading');
-            const errorElement = document.getElementById('insightsError');
-            
-            loadingElement.style.display = 'block';
-            errorElement.style.display = 'none';
-            errorElement.textContent = '';
-            
-            try {
-                const response = await fetch('/api/insights');
-                
-                if (!response.ok) {
-                    throw new Error(`Error: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                resultElement.textContent = JSON.stringify(data, null, 2);
-            } catch (error) {
-                console.error('Error fetching insights:', error);
-                errorElement.textContent = `Error: ${error.message}`;
-                errorElement.style.display = 'block';
-            } finally {
-                loadingElement.style.display = 'none';
-            }
+        if (missingFields.length > 0) {
+          throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+        
+        // Apply data to template
+        let prompt = template.promptTemplate;
+        Object.entries(data).forEach(([key, value]) => {
+          prompt = prompt.replace(new RegExp(`{{${key}}}`, 'g'), value);
         });
-    </script>
+        
+        // Call the API
+        const response = await fetch('/api/generate-insight', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            systemPrompt: template.systemPrompt,
+            userPrompt: prompt,
+            format: 'markdown'
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to generate insight');
+        }
+        
+        const result = await response.json();
+        
+        // Show the result
+        resultEl.textContent = result.result;
+        resultCard.classList.remove('hidden');
+      } catch (err) {
+        // Show error
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      } finally {
+        // Hide loading
+        loadingEl.classList.add('hidden');
+        generateBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
