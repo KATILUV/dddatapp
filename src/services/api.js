@@ -1,170 +1,205 @@
 /**
- * API service for connecting to the backend
+ * API service
+ * A wrapper around axios for making API requests
  */
+
 import axios from 'axios';
 
-// Create axios instance with base URL
-const axiosInstance = axios.create({
+// Create an axios instance with default config
+export const api = axios.create({
   baseURL: '/',
   headers: {
     'Content-Type': 'application/json',
-  }
+  },
 });
 
-// API service object
-const api = {
-  /**
-   * Get server status
-   * @returns {Promise} Promise with status information
-   */
-  getStatus: async () => {
-    try {
-      const response = await axiosInstance.get('/api/status');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching API status:', error);
-      throw error;
-    }
+// Add request interceptor for authentication if needed
+api.interceptors.request.use(
+  (config) => {
+    // You could add auth tokens here if needed
+    return config;
   },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // Handle common errors here
+    console.error('API error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Data sources API functions
+ */
+export const dataSources = {
   /**
-   * Get user data sources
-   * @returns {Promise} Promise with data sources
+   * Get all data sources
+   * @returns {Promise<Array>} Array of data sources
    */
-  getDataSources: async () => {
-    try {
-      const response = await axiosInstance.get('/api/data-sources');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data sources:', error);
-      throw error;
-    }
+  getAll: async () => {
+    const response = await api.get('/api/data-sources');
+    return response.data;
   },
 
   /**
    * Add a new data source
-   * @param {Object} dataSource - Data source object to add
-   * @returns {Promise} Promise with created data source
+   * @param {Object} source - Data source object
+   * @returns {Promise<Object>} Added data source
    */
-  addDataSource: async (dataSource) => {
-    try {
-      const response = await axiosInstance.post('/api/data-sources', dataSource);
-      return response.data;
-    } catch (error) {
-      console.error('Error adding data source:', error);
-      throw error;
-    }
+  add: async (source) => {
+    const response = await api.post('/api/data-sources', source);
+    return response.data;
   },
 
   /**
    * Update a data source
-   * @param {number} id - Data source ID
-   * @param {Object} dataSource - Updated data source object
-   * @returns {Promise} Promise with updated data source
+   * @param {string} id - Data source ID
+   * @param {Object} updates - Fields to update
+   * @returns {Promise<Object>} Updated data source
    */
-  updateDataSource: async (id, dataSource) => {
-    try {
-      const response = await axiosInstance.put(`/api/data-sources/${id}`, dataSource);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating data source:', error);
-      throw error;
-    }
+  update: async (id, updates) => {
+    const response = await api.put(`/api/data-sources/${id}`, updates);
+    return response.data;
   },
 
   /**
    * Remove a data source
-   * @param {number} id - Data source ID to remove
-   * @returns {Promise} Promise with success status
+   * @param {string} id - Data source ID
+   * @returns {Promise<Object>} Success response
    */
-  removeDataSource: async (id) => {
-    try {
-      const response = await axiosInstance.delete(`/api/data-sources/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error removing data source:', error);
-      throw error;
-    }
+  remove: async (id) => {
+    const response = await api.delete(`/api/data-sources/${id}`);
+    return response.data;
   },
 
   /**
-   * Get user insights
-   * @returns {Promise} Promise with insights
+   * Get data from a source
+   * @param {string} id - Data source ID
+   * @param {string} dataType - Type of data to fetch
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Object>} The fetched data
    */
-  getInsights: async () => {
-    try {
-      const response = await axiosInstance.get('/api/insights');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching insights:', error);
-      throw error;
-    }
+  getData: async (id, dataType, options = {}) => {
+    const response = await api.get(`/api/data-sources/${id}/data`, {
+      params: {
+        dataType,
+        ...options
+      }
+    });
+    return response.data;
   },
 
   /**
-   * Get a specific insight by ID
+   * Connect to a data source using OAuth
+   * @param {string} sourceId - Data source ID
+   * @param {string} redirectUrl - OAuth redirect URL
+   * @returns {Promise<Object>} Connection response
+   */
+  connectOAuth: async (sourceId, redirectUrl) => {
+    const response = await api.post('/api/oauth/connect', {
+      sourceId,
+      redirectUrl
+    });
+    return response.data;
+  }
+};
+
+/**
+ * Insights API functions
+ */
+export const insights = {
+  /**
+   * Get all insights
+   * @returns {Promise<Array>} Array of insights
+   */
+  getAll: async () => {
+    const response = await api.get('/api/insights');
+    return response.data;
+  },
+
+  /**
+   * Get a specific insight
    * @param {number} id - Insight ID
-   * @returns {Promise} Promise with insight details
+   * @returns {Promise<Object>} The insight
    */
-  getInsightById: async (id) => {
-    try {
-      const response = await axiosInstance.get(`/api/insights/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching insight:', error);
-      throw error;
-    }
+  getById: async (id) => {
+    const response = await api.get(`/api/insights/${id}`);
+    return response.data;
   },
 
+  /**
+   * Generate a new insight
+   * @param {string} systemPrompt - System prompt for the AI
+   * @param {string} userPrompt - User prompt with data
+   * @param {string} format - Output format (markdown, json)
+   * @returns {Promise<Object>} Generated insight
+   */
+  generate: async (systemPrompt, userPrompt, format = 'markdown') => {
+    const response = await api.post('/api/generate-insight', {
+      systemPrompt,
+      userPrompt,
+      format
+    });
+    return response.data;
+  },
+
+  /**
+   * Generate an insight from multiple data sources
+   * @param {Object} dataSources - Data from various sources
+   * @param {string} templateId - Template ID to use
+   * @returns {Promise<Object>} Generated insight
+   */
+  generateMultiSource: async (dataSources, templateId) => {
+    const response = await api.post('/api/multi-source-insight', {
+      dataSources,
+      templateId
+    });
+    return response.data;
+  }
+};
+
+/**
+ * User preferences API functions
+ */
+export const preferences = {
   /**
    * Get user preferences
-   * @returns {Promise} Promise with user preferences
+   * @returns {Promise<Object>} User preferences
    */
-  getUserPreferences: async () => {
-    try {
-      const response = await axiosInstance.get('/api/preferences');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching user preferences:', error);
-      // Return default preferences if there's an error
-      return {
-        theme: 'dark',
-        communicationStyle: 'supportive',
-        notificationsEnabled: true,
-        dataProcessingEnabled: true,
-        enhancedProfilingEnabled: false,
-      };
-    }
+  get: async () => {
+    const response = await api.get('/api/preferences');
+    return response.data;
   },
 
   /**
    * Update user preferences
-   * @param {Object} preferences - Updated preferences object
-   * @returns {Promise} Promise with updated preferences
+   * @param {Object} updates - Preference updates
+   * @returns {Promise<Object>} Updated preferences
    */
-  updatePreferences: async (preferences) => {
-    try {
-      const response = await axiosInstance.post('/api/preferences', preferences);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get the current user
-   * @returns {Promise} Promise with user information
-   */
-  getCurrentUser: async () => {
-    try {
-      const response = await axiosInstance.get('/api/auth/user');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching current user:', error);
-      return null;
-    }
-  },
+  update: async (updates) => {
+    const response = await api.post('/api/preferences', updates);
+    return response.data;
+  }
 };
 
-export default api;
+/**
+ * Server status API functions
+ */
+export const status = {
+  /**
+   * Get server status
+   * @returns {Promise<Object>} Server status
+   */
+  get: async () => {
+    const response = await api.get('/api/status');
+    return response.data;
+  }
+};

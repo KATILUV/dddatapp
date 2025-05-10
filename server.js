@@ -89,18 +89,29 @@ app.get('/api/data-sources', (req, res) => {
 });
 
 app.post('/api/data-sources', (req, res) => {
+  const { id } = req.body;
+  
+  // Check if source already exists
+  const existingSource = userData.dataSources.find(source => source.id === id);
+  if (existingSource) {
+    return res.status(409).json({ 
+      error: 'Data source already exists', 
+      source: existingSource 
+    });
+  }
+  
   const newSource = {
-    id: Date.now(), // Simple ID generation
     ...req.body,
-    connected: false,
-    lastSync: null
+    connected: req.body.connected || false,
+    lastSync: req.body.lastSync || new Date().toISOString()
   };
+  
   userData.dataSources.push(newSource);
   res.status(201).json(newSource);
 });
 
 app.put('/api/data-sources/:id', (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
   const index = userData.dataSources.findIndex(source => source.id === id);
   
   if (index !== -1) {
@@ -112,7 +123,7 @@ app.put('/api/data-sources/:id', (req, res) => {
 });
 
 app.delete('/api/data-sources/:id', (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
   const initialLength = userData.dataSources.length;
   userData.dataSources = userData.dataSources.filter(source => source.id !== id);
   
@@ -122,6 +133,124 @@ app.delete('/api/data-sources/:id', (req, res) => {
     res.status(404).json({ error: 'Data source not found' });
   }
 });
+
+// Data source data retrieval endpoint
+app.get('/api/data-sources/:id/data', (req, res) => {
+  const { id } = req.params;
+  const { dataType, startDate, endDate } = req.query;
+  
+  const source = userData.dataSources.find(source => source.id === id);
+  if (!source) {
+    return res.status(404).json({ error: 'Data source not found' });
+  }
+  
+  if (!source.connected) {
+    return res.status(400).json({ error: 'Data source is not connected' });
+  }
+  
+  // In a real implementation, this would fetch data from the external service
+  // For now, return mock data based on the source and data type
+  try {
+    // Generate the mock data
+    const mockData = generateMockData(source, dataType, { startDate, endDate });
+    
+    // Update last sync time
+    const index = userData.dataSources.findIndex(s => s.id === id);
+    if (index !== -1) {
+      userData.dataSources[index].lastSync = new Date().toISOString();
+    }
+    
+    res.json({
+      source: source.id,
+      dataType,
+      timestamp: new Date().toISOString(),
+      data: mockData
+    });
+  } catch (error) {
+    console.error(`Error fetching data from source ${id}:`, error);
+    res.status(500).json({ error: `Failed to fetch data: ${error.message}` });
+  }
+});
+
+// OAuth connection endpoint
+app.post('/api/oauth/connect', (req, res) => {
+  const { sourceId, redirectUrl } = req.body;
+  
+  const source = userData.dataSources.find(source => source.id === sourceId);
+  if (!source) {
+    return res.status(404).json({ error: 'Data source not found' });
+  }
+  
+  // In a real implementation, this would initiate the OAuth flow
+  // For now, simulate a successful connection
+  res.json({
+    status: 'connected',
+    token: {
+      access_token: `mock_access_token_${sourceId}`,
+      refresh_token: `mock_refresh_token_${sourceId}`,
+      expires_at: new Date(Date.now() + 3600 * 1000).toISOString()
+    }
+  });
+});
+
+// Helper function to generate mock data for testing
+function generateMockData(source, dataType, options = {}) {
+  // This would be replaced with real data in a production environment
+  const types = {
+    'activity': [
+      { timestamp: new Date().toISOString(), type: 'walking', duration: 30, distance: 2.5, calories: 120 },
+      { timestamp: new Date(Date.now() - 86400000).toISOString(), type: 'running', duration: 45, distance: 5, calories: 350 },
+      { timestamp: new Date(Date.now() - 172800000).toISOString(), type: 'yoga', duration: 60, calories: 200 }
+    ],
+    'sleep': [
+      { date: new Date().toISOString().split('T')[0], duration: 7.5, quality: 0.8, deepSleep: 2.1, remSleep: 1.8 },
+      { date: new Date(Date.now() - 86400000).toISOString().split('T')[0], duration: 6.2, quality: 0.7, deepSleep: 1.5, remSleep: 1.2 },
+      { date: new Date(Date.now() - 172800000).toISOString().split('T')[0], duration: 8.0, quality: 0.9, deepSleep: 2.4, remSleep: 2.0 }
+    ],
+    'vitals': [
+      { timestamp: new Date().toISOString(), heartRate: 68, bloodPressure: { systolic: 120, diastolic: 80 }, temperature: 98.6 },
+      { timestamp: new Date(Date.now() - 86400000).toISOString(), heartRate: 72, bloodPressure: { systolic: 122, diastolic: 82 }, temperature: 98.4 },
+      { timestamp: new Date(Date.now() - 172800000).toISOString(), heartRate: 65, bloodPressure: { systolic: 118, diastolic: 78 }, temperature: 98.7 }
+    ],
+    'nutrition': [
+      { timestamp: new Date().toISOString(), meal: 'breakfast', calories: 450, protein: 22, carbs: 55, fat: 15 },
+      { timestamp: new Date().toISOString(), meal: 'lunch', calories: 650, protein: 35, carbs: 70, fat: 20 },
+      { timestamp: new Date().toISOString(), meal: 'dinner', calories: 550, protein: 30, carbs: 60, fat: 18 }
+    ],
+    'listening-history': [
+      { timestamp: new Date().toISOString(), track: 'Shape of You', artist: 'Ed Sheeran', album: 'Divide', duration: 3.54 },
+      { timestamp: new Date(Date.now() - 3600000).toISOString(), track: 'Blinding Lights', artist: 'The Weeknd', album: 'After Hours', duration: 3.22 },
+      { timestamp: new Date(Date.now() - 7200000).toISOString(), track: 'Dance Monkey', artist: 'Tones and I', album: 'The Kids Are Coming', duration: 3.29 }
+    ],
+    'favorites': [
+      { track: 'Bohemian Rhapsody', artist: 'Queen', album: 'A Night at the Opera', addedAt: new Date(Date.now() - 30 * 86400000).toISOString() },
+      { track: 'Billie Jean', artist: 'Michael Jackson', album: 'Thriller', addedAt: new Date(Date.now() - 60 * 86400000).toISOString() },
+      { track: 'Imagine', artist: 'John Lennon', album: 'Imagine', addedAt: new Date(Date.now() - 90 * 86400000).toISOString() }
+    ],
+    'pages': [
+      { id: 'page1', title: 'Project Plan', lastEdited: new Date().toISOString() },
+      { id: 'page2', title: 'Meeting Notes', lastEdited: new Date(Date.now() - 86400000).toISOString() },
+      { id: 'page3', title: 'Ideas', lastEdited: new Date(Date.now() - 172800000).toISOString() }
+    ],
+    'tasks': [
+      { id: 'task1', title: 'Complete project', status: 'in_progress', dueDate: new Date(Date.now() + 7 * 86400000).toISOString() },
+      { id: 'task2', title: 'Review documentation', status: 'completed', completedAt: new Date().toISOString() },
+      { id: 'task3', title: 'Schedule meeting', status: 'not_started', dueDate: new Date(Date.now() + 2 * 86400000).toISOString() }
+    ],
+    'tweets': [
+      { id: 'tweet1', text: 'Just announced our new product!', createdAt: new Date().toISOString(), likes: 42, retweets: 12 },
+      { id: 'tweet2', text: 'Excited to share my latest project.', createdAt: new Date(Date.now() - 86400000).toISOString(), likes: 23, retweets: 5 },
+      { id: 'tweet3', text: 'Great workshop today.', createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), likes: 15, retweets: 2 }
+    ],
+    'locations': [
+      { timestamp: new Date().toISOString(), latitude: 37.7749, longitude: -122.4194, name: 'San Francisco', duration: 120 },
+      { timestamp: new Date(Date.now() - 86400000).toISOString(), latitude: 40.7128, longitude: -74.0060, name: 'New York', duration: 180 },
+      { timestamp: new Date(Date.now() - 2 * 86400000).toISOString(), latitude: 34.0522, longitude: -118.2437, name: 'Los Angeles', duration: 240 }
+    ]
+  };
+  
+  return types[dataType] || [];
+}
 
 // Insight endpoints
 app.get('/api/insights', (req, res) => {
