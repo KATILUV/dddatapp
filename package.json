@@ -53,6 +53,7 @@
     "react-native-svg": "^15.11.2",
     "react-native-web": "^0.20.0",
     "styled-components": "^6.1.18",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "ws": "^8.18.2"
   }
