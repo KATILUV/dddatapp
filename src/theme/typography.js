@@ -39,9 +39,9 @@ const typography = {
    * Font sizes for different purposes
    */
   sizes: {
-    heading1: normalize(32),
-    heading2: normalize(26),
-    heading3: normalize(22),
+    heading1: normalize(42),
+    heading2: normalize(32),
+    heading3: normalize(24),
     heading4: normalize(18),
     body: normalize(16),
     bodySmall: normalize(14),
@@ -53,13 +53,13 @@ const typography = {
    * Line heights
    */
   lineHeights: {
-    heading1: normalize(40),
-    heading2: normalize(34),
+    heading1: normalize(48),
+    heading2: normalize(38),
     heading3: normalize(30),
-    heading4: normalize(26),
-    body: normalize(24),
+    heading4: normalize(24),
+    body: normalize(22),
     bodySmall: normalize(20),
-    caption: normalize(18),
+    caption: normalize(16),
     tiny: normalize(14),
   },
   
@@ -67,10 +67,10 @@ const typography = {
    * Letter spacing
    */
   letterSpacing: {
-    tight: -0.24,
+    tight: -0.3,
     normal: 0,
-    wide: 0.4,
-    extraWide: 0.8,
+    wide: 0.5,
+    extraWide: 1.0,
   },
   
   /**

@@ -26,11 +26,11 @@ const GlassmorphicCard = ({
   useBorder = true,
   isActive = false,
 }) => {
-  // Configure blur intensity based on level
+  // Configure blur intensity based on level - more subtle for minimalist UI
   const blurIntensity = {
-    low: 20,
-    medium: 50,
-    high: 80,
+    low: 10,
+    medium: 25,
+    high: 40,
   }[intensity];
 
   // Configure border gradient colors based on active state
@@ -73,18 +73,18 @@ const GlassmorphicCard = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 20, // Slightly larger, smoother radius like in reference
     overflow: 'hidden',
     marginVertical: theme.spacing.sm,
     ...Platform.select({
       ios: {
         shadowColor: theme.colors.shadows.light,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 8,
+        elevation: 4,
       },
     }),
   },
@@ -94,21 +94,22 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     top: 0,
-    borderRadius: theme.borderRadius.lg,
-    margin: -1, // Extend border beyond container
+    borderRadius: 20,
+    margin: -0.5, // Thinner, more subtle border
     zIndex: -1,
+    opacity: 0.7, // More subtle border
   },
   blur: {
     overflow: 'hidden',
-    borderRadius: theme.borderRadius.lg,
-    margin: 1, // Offset to show border
+    borderRadius: 20,
+    margin: 0.5, // Subtler border
   },
   gradient: {
     width: '100%',
     height: '100%',
   },
   content: {
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg, // More padding for cleaner look
   },
 });
 

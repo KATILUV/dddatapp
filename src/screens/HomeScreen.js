@@ -247,9 +247,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   greeting: {
-    ...theme.typography.styles.h3,
+    ...theme.typography.styles.h2,
     color: theme.colors.text.primary,
     marginRight: theme.spacing.lg,
+    letterSpacing: theme.typography.letterSpacing.tight,
   },
   headerOrb: {
     width: 40,
@@ -355,16 +356,17 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
+    backgroundColor: 'rgba(115, 83, 186, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(168, 148, 255, 0.2)',
+    borderColor: 'rgba(115, 83, 186, 0.12)',
   },
   actionText: {
     ...theme.typography.styles.caption,
     color: theme.colors.text.secondary,
+    letterSpacing: theme.typography.letterSpacing.wide,
   },
 });
 
