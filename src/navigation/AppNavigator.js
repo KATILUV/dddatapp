@@ -15,7 +15,12 @@ import ChatScreen from '../screens/ChatScreen';
 import DataConnectionScreen from '../screens/DataConnectionScreen';
 import InsightsDashboardScreen from '../screens/InsightsDashboardScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
+import { 
+  WelcomeScreen,
+  ConnectDataScreen,
+  AboutSolsticeScreen,
+  PersonalizationPreferencesScreen
+} from '../screens/OnboardingFlow';
 
 import theme from '../theme';
 import { getData } from '../utils/storage';
