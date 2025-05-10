@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["wget"]
 
 [workflows]
-runButton = "ExpoStart"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -30,14 +30,6 @@ args = "node server.js"
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "ExpoTunnel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node start-expo.js"
-
-[[workflows.workflow]]
 name = "ExpoStart"
 author = 41029417
 mode = "sequential"
@@ -45,6 +37,15 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx expo start --web --port 5000"
+
+[[workflows.workflow]]
+name = "ExpoTunnel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node run-expo.js"
+waitForPort = 5001
 
 [deployment]
 run = ["sh", "-c", "npx expo start --web --port 5000 --no-dev"]
@@ -54,8 +55,16 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 5001
+externalPort = 3003
+
+[[ports]]
 localPort = 19000
 externalPort = 3000
+
+[[ports]]
+localPort = 19001
+externalPort = 3002
 
 [[ports]]
 localPort = 19006
