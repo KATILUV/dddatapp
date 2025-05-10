@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #121212;
+            color: #fff;
+        }
+        h1, h2 {
+            color: #7c4dff;
+        }
+        button {
+            background-color: #7c4dff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #6c3cee;
+        }
+        pre {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #e0e0e0;
+        }
+        .card {
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .loading {
+            display: none;
+            color: #7c4dff;
+            margin: 10px 0;
+        }
+        .error {
+            color: #ff5252;
+            background-color: rgba(255, 82, 82, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenAI Integration Test</h1>
+    
+    <div class="card">
+        <h2>Generate Insight</h2>
+        <button id="generateInsight">Generate New Insight</button>
+        <div id="insightLoading" class="loading">Generating insight with OpenAI... (this may take up to 15 seconds)</div>
+        <div id="insightError" class="error"></div>
+        <h3>Response:</h3>
+        <pre id="insightResult">No data yet. Click the button above to generate an insight.</pre>
+    </div>
+    
+    <div class="card">
+        <h2>All Insights</h2>
+        <button id="fetchInsights">Fetch All Insights</button>
+        <div id="insightsLoading" class="loading">Fetching insights...</div>
+        <div id="insightsError" class="error"></div>
+        <h3>Response:</h3>
+        <pre id="insightsResult">No data yet. Click the button above to fetch insights.</pre>
+    </div>
+
+    <script>
+        document.getElementById('generateInsight').addEventListener('click', async () => {
+            const resultElement = document.getElementById('insightResult');
+            const loadingElement = document.getElementById('insightLoading');
+            const errorElement = document.getElementById('insightError');
+            
+            loadingElement.style.display = 'block';
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+            
+            // Sample data - in a real app, this would come from user data
+            const dataSamples = [
+                "User frequently posts about technology topics, especially AI and machine learning.",
+                "Communication patterns show increased activity in the evenings, particularly between 8-10pm.",
+                "Content creation focuses on educational and informative material rather than entertainment.",
+                "Search history indicates strong interest in productivity tools and time management techniques.",
+                "Reading patterns show preference for in-depth technical articles over news summaries."
+            ];
+            
+            try {
+                const response = await fetch('/api/generate-insight', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataSamples,
+                        dataTypes: ['google', 'twitter', 'notes'],
+                        userId: '1',
+                    }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error generating insight:', error);
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = 'block';
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('fetchInsights').addEventListener('click', async () => {
+            const resultElement = document.getElementById('insightsResult');
+            const loadingElement = document.getElementById('insightsLoading');
+            const errorElement = document.getElementById('insightsError');
+            
+            loadingElement.style.display = 'block';
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+            
+            try {
+                const response = await fetch('/api/insights');
+                
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error fetching insights:', error);
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = 'block';
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

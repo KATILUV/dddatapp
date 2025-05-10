@@ -226,9 +226,11 @@ const server = http.createServer((req, res) => {
   
   // Generate insight using OpenAI
   if (req.url === '/api/generate-insight' && req.method === 'POST') {
+    console.log('Received request to /api/generate-insight');
     getRequestBody(req)
       .then(async (data) => {
         try {
+          console.log('Processing insight generation request with data:', JSON.stringify(data));
           // Get data samples and data types from the request
           const { dataSamples = [], dataTypes = [], userId = '1' } = data;
           
@@ -261,6 +263,8 @@ const server = http.createServer((req, res) => {
             response_format: { type: "json_object" },
             temperature: 0.7
           });
+          
+          console.log('OpenAI response received:', response.choices[0].message.content);
           
           // Parse the generated insight
           const generatedInsight = JSON.parse(response.choices[0].message.content);
@@ -361,6 +365,22 @@ const server = http.createServer((req, res) => {
   }
   
   // Handle root requests
+  // Special test route for OpenAI
+  if (req.url === '/test-openai') {
+    const testFilePath = path.join(__dirname, 'test-openai.html');
+    
+    fs.readFile(testFilePath, (err, content) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading test page');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+  
   if (req.url === '/' || req.url === '/index.html') {
     // Try to serve the index.html file
     const filePath = path.join(__dirname, 'web-build', 'index.html');
