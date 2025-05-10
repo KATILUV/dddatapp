@@ -1,69 +1,112 @@
 /**
- * OpenAI service for generating insights from user data
+ * OpenAI service for generating AI insights
  */
 
-// For backend implementation
-// Would import OpenAI package:
-// import OpenAI from 'openai';
+import axios from 'axios';
+import { api } from './api';
+
+// Cache of previously generated responses to minimize API usage
+const responseCache = new Map();
 
 /**
- * Generates an insight based on user data
- * This is a frontend mock that simulates what would happen on the backend
- * In a real implementation, this would be a fetch call to a backend API endpoint
- * that would use the OpenAI Node.js SDK
- * 
- * @param {Object} dataDetails - Data details to analyze (categories, content samples, etc.)
- * @returns {Promise<Object>} - Generated insight
+ * Generate an AI insight based on a template and user data
+ * @param {string} systemPrompt - System prompt defining AI behavior
+ * @param {string} userPrompt - User prompt with data incorporated
+ * @param {string} format - Desired output format (markdown, json, structured)
+ * @returns {Promise<string>} Generated insight text
  */
-export async function generateInsight(dataDetails) {
+export async function generateInsight(systemPrompt, userPrompt, format = 'markdown') {
   try {
-    // In a production app, this would be a fetch to the backend
-    // which would then make the OpenAI API call
-    const response = await fetch('/api/generate-insight', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(dataDetails),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate insight');
+    // Create a cache key from the prompts
+    const cacheKey = `${systemPrompt}:${userPrompt}:${format}`;
+    
+    // Check cache first
+    if (responseCache.has(cacheKey)) {
+      return responseCache.get(cacheKey);
     }
-
-    return await response.json();
+    
+    // Make API request through our server (proxy)
+    const response = await api.post('/generate-insight', {
+      systemPrompt,
+      userPrompt,
+      format
+    });
+    
+    const result = response.data.result;
+    
+    // Cache the response
+    responseCache.set(cacheKey, result);
+    
+    return result;
   } catch (error) {
     console.error('Error generating insight:', error);
-    throw error;
+    throw new Error('Failed to generate insight: ' + (error.response?.data?.error || error.message));
   }
 }
 
 /**
- * Analyzes content using OpenAI to extract themes, patterns, and insights
- * Backend implementation using OpenAI API directly
- * 
- * @param {string} content - Text content to analyze
- * @param {string} type - Type of analysis ('behavioral', 'creative', 'emotional')
- * @returns {Promise<Object>} - Analysis results
+ * Direct method for interacting with OpenAI API (for development/testing)
+ * This would typically be used server-side, not in the client
+ * @param {string} systemPrompt - System prompt defining AI behavior
+ * @param {string} userPrompt - User prompt with data incorporated
+ * @param {string} format - Desired output format
+ * @returns {Promise<string>} Generated text
  */
-export async function analyzeContent(content, type) {
+export async function generateWithOpenAI(systemPrompt, userPrompt, format = 'markdown') {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API key is required');
+  }
+  
   try {
-    // In a production app, this would be a fetch to the backend
-    const response = await fetch('/api/analyze-content', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4o', // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+        response_format: format === 'json' ? { type: 'json_object' } : undefined
       },
-      body: JSON.stringify({ content, type }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to analyze content');
-    }
-
-    return await response.json();
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        }
+      }
+    );
+    
+    return response.data.choices[0].message.content;
   } catch (error) {
-    console.error('Error analyzing content:', error);
-    throw error;
+    console.error('OpenAI API error:', error.response?.data || error.message);
+    throw new Error('Failed to generate with OpenAI: ' + (error.response?.data?.error?.message || error.message));
+  }
+}
+
+/**
+ * Generate an insight based on multiple data sources
+ * @param {Object} dataSources - Object containing data from various sources
+ * @param {string} templateId - ID of the template to use
+ * @returns {Promise<Object>} Generated insight
+ */
+export async function generateMultiSourceInsight(dataSources, templateId) {
+  try {
+    const response = await api.post('/multi-source-insight', {
+      dataSources,
+      templateId
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error generating multi-source insight:', error);
+    throw new Error('Failed to generate insight: ' + (error.response?.data?.error || error.message));
   }
 }
