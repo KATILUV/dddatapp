@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solstice - Data Sources Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #1e0f3c 0%, #0a051e 100%);
+      color: #fff;
+      margin: 0;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+    
+    p {
+      margin-bottom: 20px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    h2 {
+      font-size: 20px;
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #fff;
+    }
+    
+    h3 {
+      font-size: 18px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    
+    button {
+      background: #7b61ff;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #6a50e0;
+    }
+    
+    button:disabled {
+      background: #4a3b9c;
+      cursor: not-allowed;
+    }
+    
+    .button-primary {
+      background: #7b61ff;
+    }
+    
+    .button-secondary {
+      background: rgba(123, 97, 255, 0.6);
+    }
+    
+    .button-danger {
+      background: #ff6b6b;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .status-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    
+    .status-online {
+      background-color: #34c759;
+    }
+    
+    .status-offline {
+      background-color: #ff3b30;
+    }
+    
+    .status-warning {
+      background-color: #ffcc00;
+    }
+    
+    .status-text {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .data-source-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .data-source-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .data-source-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .data-source-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+    }
+    
+    .data-source-icon.spotify {
+      background-color: rgba(29, 185, 84, 0.3);
+      color: #1DB954;
+    }
+    
+    .data-source-icon.apple {
+      background-color: rgba(255, 45, 85, 0.3);
+      color: #FF2D55;
+    }
+    
+    .data-source-icon.google {
+      background-color: rgba(66, 133, 244, 0.3);
+      color: #4285F4;
+    }
+    
+    .data-source-icon.twitter {
+      background-color: rgba(29, 161, 242, 0.3);
+      color: #1DA1F2;
+    }
+    
+    .data-source-icon.notion {
+      background-color: rgba(0, 0, 0, 0.3);
+      color: #FFFFFF;
+    }
+    
+    .data-source-icon.location {
+      background-color: rgba(88, 86, 214, 0.3);
+      color: #5856D6;
+    }
+    
+    .data-source-info {
+      flex: 1;
+    }
+    
+    .data-source-name {
+      font-weight: 600;
+      font-size: 16px;
+      color: #fff;
+    }
+    
+    .data-source-type {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      text-transform: capitalize;
+      margin-top: 2px;
+    }
+    
+    .data-source-description {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      margin: 5px 0 10px;
+    }
+    
+    .data-source-status {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      display: inline-block;
+      margin-top: 10px;
+    }
+    
+    .connected {
+      background-color: rgba(52, 199, 89, 0.2);
+      color: #34C759;
+    }
+    
+    .disconnected {
+      background-color: rgba(255, 59, 48, 0.2);
+      color: #FF3B30;
+    }
+    
+    .actions {
+      margin-top: 10px;
+    }
+    
+    .data-types {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    
+    .data-type {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 3px 8px;
+      border-radius: 10px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .result-container {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 20px;
+      overflow: auto;
+      max-height: 300px;
+    }
+    
+    .result-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    pre {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.8);
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #7B61FF;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .error-message {
+      background-color: rgba(255, 107, 107, 0.2);
+      border-left: 3px solid #ff6b6b;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Solstice - Data Sources Test</h1>
+    <p>This page lets you test the data source connectivity and data retrieval.</p>
+    
+    <div class="card">
+      <h2>Server Status</h2>
+      <div class="status">
+        <div class="status-icon status-offline" id="server-status-icon"></div>
+        <div class="status-text" id="server-status-text">Checking server status...</div>
+      </div>
+      
+      <div class="status">
+        <div class="status-icon status-offline" id="openai-status-icon"></div>
+        <div class="status-text" id="openai-status-text">Checking OpenAI API availability...</div>
+      </div>
+      
+      <button id="refresh-status-btn">Refresh Status</button>
+    </div>
+    
+    <div class="card">
+      <h2>Data Sources</h2>
+      <p>Available data sources that can be connected to your Solstice account:</p>
+      
+      <div class="data-source-list" id="data-source-list">
+        <!-- Data sources will be loaded here -->
+        <div class="loading"></div>
+      </div>
+      
+      <button id="refresh-sources-btn">Refresh Sources</button>
+    </div>
+    
+    <div class="card">
+      <h2>Data Retrieval</h2>
+      <p>Test retrieving data from connected sources:</p>
+      
+      <div>
+        <h3>Source</h3>
+        <select id="source-select" style="padding: 8px; border-radius: 5px; background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); width: 100%; max-width: 300px;">
+          <option value="">Select a source</option>
+        </select>
+      </div>
+      
+      <div style="margin-top: 15px;">
+        <h3>Data Type</h3>
+        <select id="data-type-select" style="padding: 8px; border-radius: 5px; background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); width: 100%; max-width: 300px;" disabled>
+          <option value="">Select a data type</option>
+        </select>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <button id="fetch-data-btn" class="button-primary" disabled>Fetch Data</button>
+      </div>
+      
+      <div id="result-container" class="result-container" style="display: none;">
+        <div class="result-title">Result</div>
+        <pre id="result-content"></pre>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // DOM Elements
+    const serverStatusIcon = document.getElementById('server-status-icon');
+    const serverStatusText = document.getElementById('server-status-text');
+    const openaiStatusIcon = document.getElementById('openai-status-icon');
+    const openaiStatusText = document.getElementById('openai-status-text');
+    const refreshStatusBtn = document.getElementById('refresh-status-btn');
+    const dataSourceList = document.getElementById('data-source-list');
+    const refreshSourcesBtn = document.getElementById('refresh-sources-btn');
+    const sourceSelect = document.getElementById('source-select');
+    const dataTypeSelect = document.getElementById('data-type-select');
+    const fetchDataBtn = document.getElementById('fetch-data-btn');
+    const resultContainer = document.getElementById('result-container');
+    const resultContent = document.getElementById('result-content');
+    
+    // Store sources data
+    let sourcesData = [];
+    
+    // Check server status
+    async function checkServerStatus() {
+      try {
+        serverStatusIcon.className = 'status-icon status-offline';
+        serverStatusText.textContent = 'Checking server status...';
+        openaiStatusIcon.className = 'status-icon status-offline';
+        openaiStatusText.textContent = 'Checking OpenAI API availability...';
+        
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        
+        if (data.status === 'online') {
+          serverStatusIcon.className = 'status-icon status-online';
+          serverStatusText.textContent = `Server online (${data.timestamp})`;
+          
+          if (data.hasOpenAiKey) {
+            openaiStatusIcon.className = 'status-icon status-online';
+            openaiStatusText.textContent = 'OpenAI API key is configured';
+          } else {
+            openaiStatusIcon.className = 'status-icon status-warning';
+            openaiStatusText.textContent = 'OpenAI API key is missing';
+          }
+        } else {
+          serverStatusIcon.className = 'status-icon status-warning';
+          serverStatusText.textContent = 'Server reports issues';
+        }
+      } catch (error) {
+        serverStatusIcon.className = 'status-icon status-offline';
+        serverStatusText.textContent = 'Server is unreachable';
+        console.error('Error checking server status:', error);
+      }
+    }
+    
+    // Load data sources
+    async function loadDataSources() {
+      try {
+        dataSourceList.innerHTML = '<div class="loading"></div>';
+        sourceSelect.innerHTML = '<option value="">Select a source</option>';
+        dataTypeSelect.innerHTML = '<option value="">Select a data type</option>';
+        dataTypeSelect.disabled = true;
+        fetchDataBtn.disabled = true;
+        
+        // Get data sources from server
+        const response = await fetch('/api/data-sources');
+        sourcesData = await response.json();
+        
+        // Clear loading indicator
+        dataSourceList.innerHTML = '';
+        
+        // Create source cards
+        if (sourcesData.length === 0) {
+          dataSourceList.innerHTML = '<p>No data sources found.</p>';
+          return;
+        }
+        
+        sourcesData.forEach(source => {
+          const card = createSourceCard(source);
+          dataSourceList.appendChild(card);
+          
+          // Add to source select
+          if (source.connected) {
+            const option = document.createElement('option');
+            option.value = source.id;
+            option.textContent = source.name;
+            sourceSelect.appendChild(option);
+          }
+        });
+      } catch (error) {
+        dataSourceList.innerHTML = '<div class="error-message">Failed to load data sources: ' + error.message + '</div>';
+        console.error('Error loading data sources:', error);
+      }
+    }
+    
+    // Create a source card
+    function createSourceCard(source) {
+      const card = document.createElement('div');
+      card.className = 'data-source-card';
+      
+      // Determine icon class
+      let iconClass = '';
+      if (source.id.includes('spotify')) iconClass = 'spotify';
+      else if (source.id.includes('apple')) iconClass = 'apple';
+      else if (source.id.includes('google')) iconClass = 'google';
+      else if (source.id.includes('twitter')) iconClass = 'twitter';
+      else if (source.id.includes('notion')) iconClass = 'notion';
+      else if (source.id.includes('location')) iconClass = 'location';
+      
+      card.innerHTML = `
+        <div class="data-source-header">
+          <div class="data-source-icon ${iconClass}">
+            <i>${source.id.substring(0, 1).toUpperCase()}</i>
+          </div>
+          <div class="data-source-info">
+            <div class="data-source-name">${source.name}</div>
+            <div class="data-source-type">${source.type}</div>
+          </div>
+        </div>
+        <div class="data-source-description">${source.description || 'No description available.'}</div>
+        <div class="data-source-status ${source.connected ? 'connected' : 'disconnected'}">
+          ${source.connected ? 'Connected' : 'Not Connected'}
+        </div>
+        <div class="actions">
+          <button class="button-${source.connected ? 'danger' : 'primary'}" data-id="${source.id}" data-action="${source.connected ? 'disconnect' : 'connect'}">
+            ${source.connected ? 'Disconnect' : 'Connect'}
+          </button>
+          ${source.connected ? `<button class="button-secondary" data-id="${source.id}" data-action="fetch">Fetch Data</button>` : ''}
+        </div>
+        ${source.dataTypes ? `
+          <div class="data-types">
+            ${source.dataTypes.map(type => `<div class="data-type">${type.replace(/-/g, ' ')}</div>`).join('')}
+          </div>
+        ` : ''}
+      `;
+      
+      // Add event listeners for buttons
+      const buttons = card.querySelectorAll('button');
+      buttons.forEach(button => {
+        button.addEventListener('click', handleSourceAction);
+      });
+      
+      return card;
+    }
+    
+    // Handle source actions (connect, disconnect, fetch)
+    async function handleSourceAction(event) {
+      const action = event.target.dataset.action;
+      const sourceId = event.target.dataset.id;
+      const source = sourcesData.find(s => s.id === sourceId);
+      
+      if (!source) return;
+      
+      try {
+        if (action === 'connect') {
+          // In a real app, this would initiate OAuth flow or permissions request
+          // For now, we'll simulate a successful connection
+          const updatedSource = await fetch(`/api/data-sources/${sourceId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connected: true, lastSync: new Date().toISOString() })
+          }).then(res => res.json());
+          
+          // Refresh the sources list
+          await loadDataSources();
+          
+          alert(`Successfully connected to ${source.name}`);
+        } 
+        else if (action === 'disconnect') {
+          // Disconnect the source
+          await fetch(`/api/data-sources/${sourceId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connected: false, lastSync: null })
+          });
+          
+          // Refresh the sources list
+          await loadDataSources();
+          
+          alert(`Disconnected from ${source.name}`);
+        } 
+        else if (action === 'fetch') {
+          // Open the data retrieval section and select this source
+          sourceSelect.value = sourceId;
+          sourceSelect.dispatchEvent(new Event('change'));
+          
+          // Scroll to data retrieval section
+          document.querySelector('h2:nth-of-type(3)').scrollIntoView({ behavior: 'smooth' });
+        }
+      } catch (error) {
+        console.error(`Error with source action ${action}:`, error);
+        alert(`Error: ${error.message}`);
+      }
+    }
+    
+    // Handle source selection change
+    function handleSourceChange() {
+      const sourceId = sourceSelect.value;
+      
+      if (!sourceId) {
+        dataTypeSelect.innerHTML = '<option value="">Select a data type</option>';
+        dataTypeSelect.disabled = true;
+        fetchDataBtn.disabled = true;
+        return;
+      }
+      
+      const source = sourcesData.find(s => s.id === sourceId);
+      if (!source || !source.dataTypes) {
+        dataTypeSelect.innerHTML = '<option value="">No data types available</option>';
+        dataTypeSelect.disabled = true;
+        fetchDataBtn.disabled = true;
+        return;
+      }
+      
+      // Populate data types
+      dataTypeSelect.innerHTML = '<option value="">Select a data type</option>';
+      source.dataTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type.replace(/-/g, ' ');
+        dataTypeSelect.appendChild(option);
+      });
+      
+      dataTypeSelect.disabled = false;
+      fetchDataBtn.disabled = true;
+    }
+    
+    // Handle data type selection change
+    function handleDataTypeChange() {
+      fetchDataBtn.disabled = !dataTypeSelect.value;
+    }
+    
+    // Fetch data from selected source
+    async function fetchSourceData() {
+      const sourceId = sourceSelect.value;
+      const dataType = dataTypeSelect.value;
+      
+      if (!sourceId || !dataType) return;
+      
+      try {
+        resultContainer.style.display = 'none';
+        fetchDataBtn.disabled = true;
+        fetchDataBtn.innerHTML = '<div class="loading"></div> Fetching...';
+        
+        const response = await fetch(`/api/data-sources/${sourceId}/data?dataType=${dataType}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch data');
+        }
+        
+        const data = await response.json();
+        
+        // Display the result
+        resultContent.textContent = JSON.stringify(data, null, 2);
+        resultContainer.style.display = 'block';
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        resultContent.textContent = `Error: ${error.message}`;
+        resultContainer.style.display = 'block';
+      } finally {
+        fetchDataBtn.disabled = false;
+        fetchDataBtn.textContent = 'Fetch Data';
+      }
+    }
+    
+    // Event listeners
+    refreshStatusBtn.addEventListener('click', checkServerStatus);
+    refreshSourcesBtn.addEventListener('click', loadDataSources);
+    sourceSelect.addEventListener('change', handleSourceChange);
+    dataTypeSelect.addEventListener('change', handleDataTypeChange);
+    fetchDataBtn.addEventListener('click', fetchSourceData);
+    
+    // Initialize
+    checkServerStatus();
+    loadDataSources();
+  </script>
+</body>
+</html>

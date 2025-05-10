@@ -34,8 +34,32 @@ const chatService = {
    */
   sendMessage: async (message, history = [], options = {}) => {
     try {
+      // Check for empty message
+      if (!message || !message.trim()) {
+        throw new Error('Message cannot be empty');
+      }
+      
+      // Check for server connection
+      try {
+        const statusResponse = await api.get('/api/status');
+        
+        // Check if OpenAI API key is configured
+        if (!statusResponse.data.hasOpenAiKey) {
+          throw new Error('OpenAI API key is not configured. Please add your API key in the settings.');
+        }
+      } catch (statusError) {
+        console.error('Error checking server status:', statusError);
+        throw new Error('Cannot connect to server. Please check your internet connection.');
+      }
+      
       // Fetch relevant data from connected sources if needed
-      const contextData = await chatService.getRelevantData(message);
+      let contextData = {};
+      try {
+        contextData = await chatService.getRelevantData(message);
+      } catch (dataError) {
+        console.warn('Error fetching context data:', dataError);
+        // Continue without context data rather than failing the entire request
+      }
       
       // Create the prompt with context
       const prompt = chatService.createPromptWithContext(message, contextData);
@@ -50,8 +74,15 @@ const chatService = {
         { role: 'user', content: prompt }
       ];
       
-      // Call the API
-      const response = await api.post('/api/chat', {
+      // Call the API with timeout handling
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Request timed out. The server took too long to respond.'));
+        }, 30000); // 30 second timeout
+      });
+      
+      const fetchPromise = api.post('/api/chat', {
         messages,
         options: {
           temperature: options.temperature || 0.7,
@@ -59,14 +90,33 @@ const chatService = {
         }
       });
       
+      // Race between the timeout and the actual request
+      const response = await Promise.race([fetchPromise, timeoutPromise])
+        .finally(() => clearTimeout(timeoutId));
+      
       return {
         text: response.data.response,
         timestamp: new Date().toISOString(),
-        contextData: Object.keys(contextData)
+        contextData: Object.keys(contextData),
+        usage: response.data.usage
       };
     } catch (error) {
       console.error('Error sending message to AI:', error);
-      throw new Error(`Failed to get a response: ${error.message}`);
+      
+      // Provide more user-friendly error messages
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        throw new Error('Authentication error. Please check your API key.');
+      } else if (error.response?.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      } else if (error.response?.data?.error) {
+        throw new Error(`API error: ${error.response.data.error}`);
+      } else if (error.message.includes('timeout')) {
+        throw new Error('The request timed out. Please try again later.');
+      } else if (error.message.includes('Network Error')) {
+        throw new Error('Network error. Please check your internet connection.');
+      } else {
+        throw new Error(`Failed to get a response: ${error.message}`);
+      }
     }
   },
   
