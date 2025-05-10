@@ -3,7 +3,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Serve static files
+// Serve static files from web-build
 app.use(express.static(path.join(__dirname, 'web-build')));
 
 // Add middleware for JSON parsing
@@ -49,7 +49,6 @@ app.get('/api/data-sources', (req, res) => {
 });
 
 app.get('/api/insights', (req, res) => {
-  // For now, return some sample insights
   res.json([
     {
       id: 1,
@@ -59,7 +58,7 @@ app.get('/api/insights', (req, res) => {
       confidence: 85
     },
     {
-      id: 2,
+      id: 2, 
       type: 'creative',
       title: 'Content Themes',
       summary: 'Your content shows strong interest in technology and science fiction.',
@@ -75,13 +74,11 @@ app.get('/api/insights', (req, res) => {
   ]);
 });
 
-// For all other GET requests, return the React app
+// For all other routes, serve index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'web-build', 'index.html'));
+  res.sendFile(path.join(__dirname, 'web-build', 'index.html'));
 });
 
-// Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Visit http://localhost:${PORT} to view the app`);
 });
