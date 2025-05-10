@@ -141,7 +141,7 @@ const MainNavigator = () => {
  */
 const AppNavigator = ({ isFirstLaunch }) => {
   const [initialRoute, setInitialRoute] = useState(
-    isFirstLaunch ? 'Onboarding' : 'Main'
+    isFirstLaunch ? 'Welcome' : 'Main'
   );
   
   return (
@@ -154,8 +154,11 @@ const AppNavigator = ({ isFirstLaunch }) => {
           presentation: 'transparentModal',
         }}
       >
-        {/* Onboarding */}
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        {/* Onboarding Flow */}
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="ConnectData" component={ConnectDataScreen} />
+        <Stack.Screen name="AboutSolstice" component={AboutSolsticeScreen} />
+        <Stack.Screen name="PersonalizationPreferences" component={PersonalizationPreferencesScreen} />
         
         {/* Main app */}
         <Stack.Screen name="Main" component={MainNavigator} />
