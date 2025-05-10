@@ -1,143 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing
-} from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
-
+/**
+ * Onboarding screen for selecting preferred tone of conversation
+ */
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, Animated } from 'react-native';
 import OptionSelector from '../../components/OptionSelector';
 import Button from '../../components/Button';
 import theme from '../../theme';
+import { fadeInUp } from '../../utils/animations';
 
-const { width } = Dimensions.get('window');
-
-const toneOptions = [
-  {
-    label: 'Soft',
-    value: 'soft',
-    description: 'Gentle and nurturing, focuses on emotional well-being and personal growth',
-    icon: <Feather name="sun" size={24} color={theme.colors.text.primary} />
-  },
-  {
-    label: 'Honest',
-    value: 'honest',
-    description: 'Direct and straightforward, offers clear perspectives without sugar-coating',
-    icon: <Feather name="check-circle" size={24} color={theme.colors.text.primary} />
-  },
-  {
-    label: 'Poetic',
-    value: 'poetic',
-    description: 'Imaginative and metaphorical, helps you see patterns through creative lenses',
-    icon: <Feather name="feather" size={24} color={theme.colors.text.primary} />
-  },
-  {
-    label: 'Neutral',
-    value: 'neutral',
-    description: 'Balanced and objective, presents information and insights without bias',
-    icon: <Feather name="circle" size={24} color={theme.colors.text.primary} />
-  }
-];
-
-const ToneSelection = ({ onNext, isActive, onboardingData }) => {
-  const [selectedTone, setSelectedTone] = useState(onboardingData.tone);
+/**
+ * Tone selection screen in onboarding flow
+ * @param {Object} props - Component props
+ * @param {Object} props.userData - User data object
+ * @param {Function} props.onNext - Function to move to next screen
+ * @returns {React.ReactElement} - Rendered component
+ */
+const ToneSelection = ({ userData, onNext }) => {
+  const [selectedTone, setSelectedTone] = useState(userData.tone || null);
   
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(30);
-  const contentOpacity = useSharedValue(0);
-  const buttonOpacity = useSharedValue(0);
+  // Animation styles
+  const titleAnim = fadeInUp(100);
+  const subtitleAnim = fadeInUp(200);
+  const optionsAnim = fadeInUp(300);
+  const buttonAnim = fadeInUp(500);
   
-  useEffect(() => {
-    if (isActive) {
-      // Staggered animation for elements
-      titleOpacity.value = withDelay(
-        100, 
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      titleTranslateY.value = withDelay(
-        100, 
-        withTiming(0, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      contentOpacity.value = withDelay(
-        300, 
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      buttonOpacity.value = withDelay(
-        500, 
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-    } else {
-      // Reset animations when not active
-      titleOpacity.value = 0;
-      titleTranslateY.value = 30;
-      contentOpacity.value = 0;
-      buttonOpacity.value = 0;
-    }
-  }, [isActive]);
+  // Tone options
+  const toneOptions = [
+    {
+      id: 'poetic',
+      title: 'Poetic',
+      description: 'Using metaphors and rich imagery to convey ideas',
+      icon: 'book',
+    },
+    {
+      id: 'honest',
+      title: 'Honest',
+      description: 'Direct and straightforward, even when the truth is tough',
+      icon: 'hand-right',
+    },
+    {
+      id: 'soft',
+      title: 'Soft',
+      description: 'Gentle and encouraging, with an empathetic approach',
+      icon: 'heart',
+    },
+    {
+      id: 'neutral',
+      title: 'Neutral',
+      description: 'Balanced and objective, focusing on the facts',
+      icon: 'sparkles',
+    },
+  ];
   
-  const titleStyle = useAnimatedStyle(() => {
-    return {
-      opacity: titleOpacity.value,
-      transform: [{ translateY: titleTranslateY.value }]
-    };
-  });
-  
-  const contentStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-    };
-  });
-  
-  const buttonStyle = useAnimatedStyle(() => {
-    return {
-      opacity: buttonOpacity.value,
-      transform: [{ 
-        translateY: withTiming(selectedTone ? 0 : 20, { duration: 300 }) 
-      }]
-    };
-  });
-  
-  const handleSelectTone = (value) => {
-    setSelectedTone(value);
+  const handleSelect = (tone) => {
+    setSelectedTone(tone);
   };
   
-  const handleContinue = () => {
+  const handleNext = () => {
     if (selectedTone) {
-      onNext({ tone: selectedTone });
+      onNext('tone', selectedTone);
     }
   };
-  
+
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.titleContainer, titleStyle]}>
-        <Text style={styles.title}>Select a tone</Text>
-        <Text style={styles.subtitle}>
-          How would you like Voa to communicate with you?
-        </Text>
+      <Animated.Text style={[styles.title, titleAnim]}>
+        Choose a tone
+      </Animated.Text>
+      
+      <Animated.Text style={[styles.subtitle, subtitleAnim]}>
+        How would you like Voa to communicate with you?
+      </Animated.Text>
+      
+      <Animated.View style={optionsAnim}>
+        <View style={styles.optionsContainer}>
+          {toneOptions.map((option) => (
+            <OptionSelector
+              key={option.id}
+              title={option.title}
+              description={option.description}
+              icon={option.icon}
+              selected={selectedTone === option.id}
+              onSelect={() => handleSelect(option.id)}
+              style={styles.option}
+            />
+          ))}
+        </View>
       </Animated.View>
       
-      <Animated.View style={[styles.content, contentStyle]}>
-        <OptionSelector
-          options={toneOptions}
-          selectedOption={selectedTone}
-          onSelect={handleSelectTone}
-        />
-      </Animated.View>
-      
-      <Animated.View style={[styles.buttonContainer, buttonStyle]}>
-        <Button
-          title="Continue"
-          onPress={handleContinue}
+      <Animated.View style={[styles.buttonContainer, buttonAnim]}>
+        <Button 
+          title="Continue" 
+          onPress={handleNext} 
           disabled={!selectedTone}
-          variant="primary"
-          size="large"
-          fullWidth
+          iconRight="arrow-forward"
         />
       </Animated.View>
     </View>
@@ -147,36 +103,33 @@ const ToneSelection = ({ onNext, isActive, onboardingData }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
   },
   title: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading1,
+    ...theme.typography.styles.h2,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
     textAlign: 'center',
+    marginBottom: theme.spacing.md,
   },
   subtitle: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.body,
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.secondary,
     textAlign: 'center',
-    maxWidth: width * 0.8,
+    marginBottom: theme.spacing.xl,
   },
-  content: {
+  optionsContainer: {
     width: '100%',
-    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.xl,
+  },
+  option: {
+    marginBottom: theme.spacing.md,
   },
   buttonContainer: {
-    position: 'absolute',
-    bottom: 120,
     width: '100%',
+    marginTop: theme.spacing.md,
+    alignItems: 'center',
   },
 });
 

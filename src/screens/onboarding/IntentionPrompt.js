@@ -1,185 +1,175 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Keyboard, Dimensions } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withSequence,
-  Easing
-} from 'react-native-reanimated';
-
+/**
+ * Onboarding screen for setting user's intention with the app
+ */
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, Animated, ScrollView } from 'react-native';
 import InputField from '../../components/InputField';
 import Button from '../../components/Button';
+import GlassmorphicCard from '../../components/GlassmorphicCard';
 import theme from '../../theme';
+import { fadeInUp } from '../../utils/animations';
 
-const { width } = Dimensions.get('window');
+/**
+ * Intention prompt screen for onboarding
+ * @param {Object} props - Component props
+ * @param {Object} props.userData - User data object
+ * @param {Function} props.onNext - Function to move to next screen
+ * @returns {React.ReactElement} - Rendered component
+ */
+const IntentionPrompt = ({ userData, onNext }) => {
+  const [intention, setIntention] = useState(userData.intention || '');
+  const [isValid, setIsValid] = useState(false);
+  
+  // Animation styles
+  const titleAnim = fadeInUp(100);
+  const subtitleAnim = fadeInUp(200);
+  const cardAnim = fadeInUp(300);
+  const suggestionsAnim = fadeInUp(400);
+  const buttonAnim = fadeInUp(500);
 
-const IntentionPrompt = ({ onNext, isActive, onboardingData }) => {
-  const [intention, setIntention] = useState(onboardingData.intention || '');
-  const inputRef = useRef(null);
-  
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(30);
-  const contentOpacity = useSharedValue(0);
-  const buttonOpacity = useSharedValue(0);
-  const buttonTranslateY = useSharedValue(20);
-  
+  // Suggestion examples
+  const suggestions = [
+    "Understand my online behavior patterns",
+    "Get insights about my digital well-being",
+    "Discover meaningful connections in my data",
+    "Find balance in my digital life",
+  ];
+
+  // Validate intention
   useEffect(() => {
-    if (isActive) {
-      // Focus input after a short delay
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 600);
-      
-      // Staggered animation for elements
-      titleOpacity.value = withDelay(
-        100, 
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      titleTranslateY.value = withDelay(
-        100, 
-        withTiming(0, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      contentOpacity.value = withDelay(
-        300, 
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      buttonOpacity.value = withDelay(
-        500, 
-        withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) })
-      );
-      
-      buttonTranslateY.value = withSequence(
-        withDelay(500, withTiming(0, { duration: 600, easing: Easing.out(Easing.cubic) }))
-      );
-      
-      return () => clearTimeout(timer);
-    } else {
-      // Reset animations when not active
-      titleOpacity.value = 0;
-      titleTranslateY.value = 30;
-      contentOpacity.value = 0;
-      buttonOpacity.value = 0;
-      buttonTranslateY.value = 20;
+    setIsValid(intention.trim().length > 10);
+  }, [intention]);
+
+  const handleNext = () => {
+    if (isValid) {
+      onNext('intention', intention);
     }
-  }, [isActive]);
-  
-  const titleStyle = useAnimatedStyle(() => {
-    return {
-      opacity: titleOpacity.value,
-      transform: [{ translateY: titleTranslateY.value }]
-    };
-  });
-  
-  const contentStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-    };
-  });
-  
-  const buttonStyle = useAnimatedStyle(() => {
-    return {
-      opacity: buttonOpacity.value,
-      transform: [{ translateY: buttonTranslateY.value }]
-    };
-  });
-  
-  const handleIntentionChange = (text) => {
-    setIntention(text);
   };
-  
-  const handleContinue = () => {
-    Keyboard.dismiss();
-    onNext({ intention: intention.trim() });
+
+  const handleSuggestionPress = (suggestion) => {
+    setIntention(suggestion);
   };
-  
+
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.titleContainer, titleStyle]}>
-        <Text style={styles.title}>What's your intention?</Text>
-        <Text style={styles.subtitle}>
-          What do you want {onboardingData.name || 'Voa'} to help you understand about yourself?
-        </Text>
+    <ScrollView 
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <Animated.Text style={[styles.title, titleAnim]}>
+        What's your intention?
+      </Animated.Text>
+      
+      <Animated.Text style={[styles.subtitle, subtitleAnim]}>
+        Voa works best when it understands what you hope to achieve.
+        What do you want to learn about yourself?
+      </Animated.Text>
+      
+      <Animated.View style={cardAnim}>
+        <GlassmorphicCard style={styles.card}>
+          <InputField
+            placeholder="Your intention with Voa..."
+            value={intention}
+            onChangeText={setIntention}
+            multiline
+            numberOfLines={4}
+            style={styles.inputField}
+            inputStyle={styles.input}
+          />
+          <Text style={styles.inputHint}>
+            {intention.length > 0 ? `${intention.length} characters` : 'Min 10 characters'}
+          </Text>
+        </GlassmorphicCard>
       </Animated.View>
       
-      <Animated.View style={[styles.content, contentStyle]}>
-        <InputField
-          ref={inputRef}
-          label="Your intention"
-          value={intention}
-          onChangeText={handleIntentionChange}
-          placeholder="I want to understand my creative patterns..."
-          multiline
-          maxLength={200}
-          autoFocus={isActive}
-          style={styles.input}
-        />
+      <Animated.View style={suggestionsAnim}>
+        <Text style={styles.suggestionsTitle}>
+          Or try one of these:
+        </Text>
         
-        <Text style={styles.helpText}>
-          This helps {onboardingData.name || 'Voa'} provide more personalized insights from your data.
-        </Text>
+        <View style={styles.suggestionsContainer}>
+          {suggestions.map((suggestion, index) => (
+            <Button
+              key={index}
+              title={suggestion}
+              variant="outline"
+              size="small"
+              onPress={() => handleSuggestionPress(suggestion)}
+              style={styles.suggestionButton}
+            />
+          ))}
+        </View>
       </Animated.View>
       
-      <Animated.View style={[styles.buttonContainer, buttonStyle]}>
-        <Button
-          title="Begin Journey"
-          onPress={handleContinue}
-          variant="primary"
-          size="large"
-          fullWidth
+      <Animated.View style={[styles.buttonContainer, buttonAnim]}>
+        <Button 
+          title="Start your journey" 
+          onPress={handleNext} 
+          disabled={!isValid}
+          iconRight="arrow-forward"
         />
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
   },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxxl,
   },
   title: {
-    fontFamily: theme.typography.fonts.serif.bold,
-    fontSize: theme.typography.sizes.heading1,
+    ...theme.typography.styles.h2,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.s,
     textAlign: 'center',
+    marginBottom: theme.spacing.md,
   },
   subtitle: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.body,
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.secondary,
     textAlign: 'center',
-    maxWidth: width * 0.8,
+    marginBottom: theme.spacing.xl,
+    lineHeight: theme.typography.lineHeights.body,
   },
-  content: {
+  card: {
     width: '100%',
-    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+  },
+  inputField: {
+    marginBottom: 0,
   },
   input: {
-    marginBottom: theme.spacing.l,
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
-  helpText: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.bodySmall,
-    color: theme.colors.text.muted,
-    textAlign: 'center',
-    paddingHorizontal: theme.spacing.xl,
+  inputHint: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+    textAlign: 'right',
+    marginTop: theme.spacing.xs,
+  },
+  suggestionsTitle: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.tertiary,
+    marginBottom: theme.spacing.md,
+  },
+  suggestionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: theme.spacing.xl,
+  },
+  suggestionButton: {
+    margin: theme.spacing.xs,
   },
   buttonContainer: {
-    position: 'absolute',
-    bottom: 120,
     width: '100%',
+    marginTop: theme.spacing.lg,
+    alignItems: 'center',
   },
 });
 

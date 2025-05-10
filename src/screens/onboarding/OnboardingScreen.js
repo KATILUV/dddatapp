@@ -1,194 +1,164 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, BackHandler } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  runOnJS,
-  Easing
-} from 'react-native-reanimated';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+/**
+ * Main onboarding screen that handles the flow between onboarding steps
+ */
+import React, { useState, useRef } from 'react';
+import { StyleSheet, View, Animated } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
+import GradientBackground from '../../components/GradientBackground';
 import ProgressDots from '../../components/ProgressDots';
-import ToneSelection from './ToneSelection';
-import NameInput from './NameInput';
-import IntentionPrompt from './IntentionPrompt';
 import AnimatedOrb from '../../components/AnimatedOrb';
-import theme from '../../theme';
+import { fadeIn } from '../../utils/animations';
 
-const { width, height } = Dimensions.get('window');
+// Import onboarding screens
+import NameInput from './NameInput';
+import ToneSelection from './ToneSelection';
+import IntentionPrompt from './IntentionPrompt';
 
-const STEPS = [
-  { id: 'tone', component: ToneSelection },
-  { id: 'name', component: NameInput },
-  { id: 'intention', component: IntentionPrompt },
-];
-
-const OnboardingScreen = ({ navigation }) => {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [onboardingData, setOnboardingData] = useState({
-    tone: null,
-    name: 'Voa',
+/**
+ * Main onboarding component that manages the flow between onboarding steps
+ * @returns {React.ReactElement} - Rendered component
+ */
+const OnboardingScreen = () => {
+  const navigation = useNavigation();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [userData, setUserData] = useState({
+    name: '',
+    tone: '',
     intention: '',
   });
   
-  const slidePosition = useSharedValue(0);
-  const opacity = useSharedValue(1);
-  const orbSize = useSharedValue(120);
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const animatedStyle = fadeIn(500);
   
-  // Handle back button press
-  useEffect(() => {
-    const handleBackPress = () => {
-      if (currentStepIndex > 0) {
-        handlePreviousStep();
-        return true;
-      }
-      return false;
-    };
-    
-    BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-    
-    return () => {
-      BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
-    };
-  }, [currentStepIndex]);
+  // Steps in the onboarding process
+  const steps = [
+    {
+      id: 'name',
+      component: NameInput,
+    },
+    {
+      id: 'tone',
+      component: ToneSelection,
+    },
+    {
+      id: 'intention',
+      component: IntentionPrompt,
+    },
+  ];
   
-  // Save data for the current step and go to next step
-  const handleNextStep = async (stepData) => {
-    const updatedData = { ...onboardingData, ...stepData };
-    setOnboardingData(updatedData);
+  /**
+   * Handles moving to the next step in the onboarding process
+   * @param {string} field - Field name to update
+   * @param {any} value - Value to store for the field
+   */
+  const handleNext = (field, value) => {
+    // Update user data
+    if (field) {
+      setUserData(prev => ({
+        ...prev,
+        [field]: value,
+      }));
+    }
     
-    // If we're on the last step, finish onboarding
-    if (currentStepIndex === STEPS.length - 1) {
-      try {
-        await AsyncStorage.setItem('onboardingData', JSON.stringify(updatedData));
-        
-        // Animate before navigating away
-        opacity.value = withTiming(0, { duration: 400 }, () => {
-          runOnJS(navigation.replace)('Home');
-        });
-      } catch (error) {
-        console.error('Error saving onboarding data:', error);
+    // Animate transition
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      // If at the last step, complete onboarding
+      if (currentStep >= steps.length - 1) {
+        // Save user data and navigate to main app
+        completeOnboarding();
+      } else {
+        // Otherwise, move to next step
+        setCurrentStep(currentStep + 1);
+        // Fade back in
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
       }
-    } else {
-      // Animate to next step
-      slidePosition.value = withTiming(
-        -width * (currentStepIndex + 1),
-        { duration: 400, easing: Easing.out(Easing.cubic) },
-        () => {
-          runOnJS(setCurrentStepIndex)(currentStepIndex + 1);
-        }
-      );
-      
-      // Animate orb size based on step
-      orbSize.value = withSpring(
-        currentStepIndex === 0 ? 150 : 180,
-        { damping: 12, stiffness: 90 }
-      );
+    });
+  };
+  
+  /**
+   * Complete the onboarding process and navigate to the main app
+   */
+  const completeOnboarding = async () => {
+    try {
+      // In a real app, we would store this in AsyncStorage
+      // For now, we'll just navigate to the main app
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      });
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
     }
   };
   
-  // Go to previous step
-  const handlePreviousStep = () => {
-    slidePosition.value = withTiming(
-      -width * (currentStepIndex - 1),
-      { duration: 400, easing: Easing.out(Easing.cubic) },
-      () => {
-        runOnJS(setCurrentStepIndex)(currentStepIndex - 1);
-      }
-    );
-    
-    // Animate orb size based on step
-    orbSize.value = withSpring(
-      currentStepIndex === 2 ? 150 : 120,
-      { damping: 12, stiffness: 90 }
-    );
-  };
+  // Current step component
+  const CurrentStepComponent = steps[currentStep].component;
   
-  // Animated style for the slider
-  const sliderStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: slidePosition.value }],
-      opacity: opacity.value,
-    };
-  });
-  
-  // Animated style for the orb
-  const orbStyle = useAnimatedStyle(() => {
-    return {
-      width: orbSize.value,
-      height: orbSize.value,
-    };
-  });
-  
-  // Render the steps horizontally
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.orbContainer, orbStyle]}>
-        <AnimatedOrb size={orbSize.value} />
-      </Animated.View>
-      
-      <Animated.View style={[styles.sliderContainer, sliderStyle]}>
-        {STEPS.map((step, index) => {
-          const StepComponent = step.component;
-          return (
-            <View key={step.id} style={styles.stepContainer}>
-              <StepComponent
-                onNext={handleNextStep}
-                onboardingData={onboardingData}
-                isActive={currentStepIndex === index}
-              />
-            </View>
-          );
-        })}
-      </Animated.View>
-      
-      <View style={styles.footer}>
-        <ProgressDots
-          steps={STEPS.length}
-          currentStep={currentStepIndex}
-          style={styles.progressDots}
-        />
+    <GradientBackground>
+      <View style={styles.container}>
+        {/* Floating orb */}
+        <View style={styles.orbContainer}>
+          <AnimatedOrb size="large" float glow />
+        </View>
+        
+        {/* Current step content */}
+        <Animated.View 
+          style={[
+            styles.contentContainer,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <CurrentStepComponent 
+            userData={userData} 
+            onNext={handleNext} 
+          />
+        </Animated.View>
+        
+        {/* Progress indicator */}
+        <View style={styles.progressContainer}>
+          <ProgressDots 
+            totalSteps={steps.length} 
+            currentStep={currentStep} 
+          />
+        </View>
       </View>
-    </View>
+    </GradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   orbContainer: {
     position: 'absolute',
-    top: height * 0.15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
+    top: '10%',
+    alignSelf: 'center',
+    zIndex: -1,
   },
-  sliderContainer: {
-    flexDirection: 'row',
-    width: width * STEPS.length,
-    height: height,
+  contentContainer: {
+    width: '100%',
+    paddingHorizontal: 24,
+    marginTop: 60,
   },
-  stepContainer: {
-    width,
-    height: height,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
-  },
-  footer: {
+  progressContainer: {
     position: 'absolute',
-    bottom: height * 0.08,
-    left: 0,
-    right: 0,
+    bottom: 40,
+    width: '100%',
     alignItems: 'center',
-  },
-  progressDots: {
-    marginBottom: theme.spacing.xl,
   },
 });
 

@@ -1,227 +1,146 @@
-import React, { useState, useRef, useEffect } from 'react';
+/**
+ * Custom text input component with styling consistent with the app theme
+ */
+import React, { useState } from 'react';
 import { 
+  StyleSheet, 
   View, 
   TextInput, 
-  Text, 
-  StyleSheet, 
-  Animated, 
-  TouchableWithoutFeedback,
+  TouchableOpacity, 
+  Text,
   Platform
 } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import theme from '../theme';
 
+/**
+ * Styled text input field
+ * @param {Object} props - Component props
+ * @param {string} props.value - Input value
+ * @param {Function} props.onChangeText - Function called when text changes
+ * @param {string} props.placeholder - Placeholder text
+ * @param {boolean} props.secureTextEntry - Whether to hide text (for passwords)
+ * @param {string} props.label - Label text to display above input
+ * @param {string} props.error - Error message to display
+ * @param {Object} props.style - Additional styles for container
+ * @param {Object} props.inputStyle - Additional styles for text input
+ * @returns {React.ReactElement} - Rendered component
+ */
 const InputField = ({
-  label,
   value,
   onChangeText,
   placeholder,
   secureTextEntry,
-  multiline = false,
-  maxLength,
-  autoCapitalize = 'none',
-  keyboardType = 'default',
-  returnKeyType = 'done',
-  onSubmitEditing,
+  label,
   error,
-  icon,
   style,
-  autoFocus = false,
+  inputStyle,
+  ...restProps
 }) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [showPlaceholder, setShowPlaceholder] = useState(!value);
-  
-  const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
-  const inputRef = useRef(null);
-  
-  useEffect(() => {
-    Animated.timing(animatedValue, {
-      toValue: (isFocused || value) ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-    
-    setShowPlaceholder(!(isFocused || value));
-  }, [isFocused, value, animatedValue]);
-  
-  const borderColor = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['rgba(168, 148, 255, 0.2)', 'rgba(168, 148, 255, 0.6)'],
-  });
-  
-  const labelSize = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [theme.typography.sizes.body, theme.typography.sizes.caption],
-  });
-  
-  const labelTop = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [multiline ? 16 : 12, -10],
-  });
-  
-  const labelColor = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [theme.colors.text.secondary, theme.colors.accent.primary],
-  });
-  
-  const handleFocus = () => {
-    setIsFocused(true);
-  };
-  
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
-  
-  const focusInput = () => {
-    inputRef.current?.focus();
-  };
-  
-  const renderCounter = () => {
-    if (!maxLength) return null;
-    
-    return (
-      <Text style={styles.counter}>
-        {value ? value.length : 0}/{maxLength}
-      </Text>
-    );
-  };
-  
+  const [focused, setFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleFocus = () => setFocused(true);
+  const handleBlur = () => setFocused(false);
+  const toggleShowPassword = () => setShowPassword(!showPassword);
+
   return (
-    <TouchableWithoutFeedback onPress={focusInput}>
-      <View style={[styles.container, style]}>
-        <Animated.View 
-          style={[
-            styles.inputContainer, 
-            { borderColor: error ? theme.colors.ui.error : borderColor }
-          ]}
-        >
-          <LinearGradient
-            colors={['rgba(35, 35, 60, 0.5)', 'rgba(20, 20, 40, 0.3)']}
-            style={styles.gradient}
-          />
-          
-          <BlurView intensity={5} style={StyleSheet.absoluteFill}>
-            <View style={StyleSheet.absoluteFill} />
-          </BlurView>
-          
-          <Animated.Text 
-            style={[
-              styles.label, 
-              { 
-                top: labelTop, 
-                fontSize: labelSize,
-                color: error ? theme.colors.ui.error : labelColor,
-              }
-            ]}
+    <View style={[styles.container, style]}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      
+      <View
+        style={[
+          styles.inputContainer,
+          focused && styles.inputContainerFocused,
+          error && styles.inputContainerError
+        ]}
+      >
+        <TextInput
+          style={[styles.input, inputStyle]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={theme.colors.text.disabled}
+          secureTextEntry={secureTextEntry && !showPassword}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          selectionColor={theme.colors.accent.primary}
+          {...restProps}
+        />
+
+        {secureTextEntry && (
+          <TouchableOpacity
+            style={styles.visibilityToggle}
+            onPress={toggleShowPassword}
+            activeOpacity={0.7}
           >
-            {label}
-          </Animated.Text>
-          
-          <View style={styles.inputWrapper}>
-            {icon && <View style={styles.icon}>{icon}</View>}
-            
-            <TextInput
-              ref={inputRef}
-              style={[
-                styles.input, 
-                multiline && styles.multilineInput,
-                icon && styles.inputWithIcon
-              ]}
-              value={value}
-              onChangeText={onChangeText}
-              placeholder={showPlaceholder ? placeholder : ''}
-              placeholderTextColor={theme.colors.text.muted}
-              secureTextEntry={secureTextEntry}
-              multiline={multiline}
-              numberOfLines={multiline ? 4 : 1}
-              maxLength={maxLength}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              autoCapitalize={autoCapitalize}
-              keyboardType={keyboardType}
-              returnKeyType={returnKeyType}
-              onSubmitEditing={onSubmitEditing}
-              autoFocus={autoFocus}
-              selectionColor={theme.colors.accent.primary}
-              blurOnSubmit={!multiline}
-              textAlignVertical={multiline ? 'top' : 'center'}
+            <Ionicons
+              name={showPassword ? 'eye-off' : 'eye'}
+              size={20}
+              color={theme.colors.text.tertiary}
             />
-            
-            {renderCounter()}
-          </View>
-        </Animated.View>
-        
-        {error && (
-          <Text style={styles.errorText}>{error}</Text>
+          </TouchableOpacity>
         )}
       </View>
-    </TouchableWithoutFeedback>
+      
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.l,
     width: '100%',
-  },
-  inputContainer: {
-    borderWidth: 1,
-    borderRadius: theme.borderRadius.medium,
-    paddingHorizontal: theme.spacing.m,
-    paddingTop: theme.spacing.l,
-    paddingBottom: theme.spacing.s,
-    position: 'relative',
-    overflow: 'hidden',
-    minHeight: 60,
-  },
-  gradient: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.md,
   },
   label: {
-    position: 'absolute',
-    left: theme.spacing.m,
-    fontFamily: theme.typography.fonts.mono.medium,
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.secondary,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 4,
-    zIndex: 1,
+    marginBottom: theme.spacing.xs,
   },
-  inputWrapper: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.medium,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    height: theme.heights.input,
+    paddingHorizontal: theme.spacing.md,
+    overflow: 'hidden',
+  },
+  inputContainerFocused: {
+    borderColor: theme.colors.accent.primary,
+    backgroundColor: 'rgba(168, 148, 255, 0.05)',
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.accent.glow,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  inputContainerError: {
+    borderColor: theme.colors.error.default,
   },
   input: {
     flex: 1,
+    ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.primary,
-    fontSize: theme.typography.sizes.body,
-    fontFamily: theme.typography.fonts.serif.regular,
-    paddingVertical: Platform.OS === 'android' ? 8 : 12,
-    height: Platform.OS === 'android' ? 48 : 'auto',
+    paddingVertical: theme.spacing.sm,
+    height: '100%',
   },
-  multilineInput: {
-    height: 100,
-    textAlignVertical: 'top',
-    paddingTop: theme.spacing.s,
-  },
-  inputWithIcon: {
-    paddingLeft: theme.spacing.s,
-  },
-  icon: {
-    marginRight: theme.spacing.s,
-  },
-  counter: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.muted,
-    marginLeft: theme.spacing.s,
+  visibilityToggle: {
+    padding: theme.spacing.xs,
   },
   errorText: {
-    color: theme.colors.ui.error,
-    fontSize: theme.typography.sizes.caption,
-    fontFamily: theme.typography.fonts.mono.regular,
+    ...theme.typography.styles.caption,
+    color: theme.colors.error.default,
     marginTop: theme.spacing.xs,
-    marginLeft: theme.spacing.s,
   },
 });
 

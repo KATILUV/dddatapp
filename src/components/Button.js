@@ -1,253 +1,275 @@
+/**
+ * Custom button component with various styles
+ */
 import React from 'react';
 import { 
+  StyleSheet, 
   TouchableOpacity, 
   Text, 
-  StyleSheet, 
-  ActivityIndicator, 
-  Dimensions,
-  View
+  View,
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  withSequence,
-  withDelay,
-  Easing
-} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import { usePressAnimation } from '../utils/animations';
 import theme from '../theme';
 
-const { width } = Dimensions.get('window');
-
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
-
+/**
+ * Custom button component with multiple variants
+ * @param {Object} props - Component props
+ * @param {string} props.title - Button text
+ * @param {Function} props.onPress - Callback function when button is pressed
+ * @param {boolean} props.disabled - Whether button is disabled
+ * @param {string} props.variant - Button style variant ('primary', 'secondary', 'outline', 'text')
+ * @param {string} props.size - Button size ('small', 'medium', 'large')
+ * @param {boolean} props.isLoading - Whether to show loading indicator
+ * @param {string} props.iconLeft - Name of icon to display on left side
+ * @param {string} props.iconRight - Name of icon to display on right side
+ * @param {Object} props.style - Additional styles for the button
+ * @returns {React.ReactElement} - Rendered component
+ */
 const Button = ({
   title,
   onPress,
-  variant = 'primary', // 'primary', 'secondary', 'outline', 'text'
-  size = 'medium', // 'small', 'medium', 'large'
-  fullWidth = false,
   disabled = false,
-  loading = false,
-  leftIcon,
-  rightIcon,
+  variant = 'primary',
+  size = 'medium',
+  isLoading = false,
+  iconLeft,
+  iconRight,
   style,
 }) => {
-  const scale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0);
+  // Get animation handlers and styles
+  const { pressHandlers, style: animatedStyle } = usePressAnimation();
   
-  const handlePressIn = () => {
-    scale.value = withTiming(0.97, { duration: 100 });
-    glowOpacity.value = withTiming(1, { duration: 200 });
+  // Determine button height based on size
+  const buttonHeight = {
+    small: theme.heights.button.sm,
+    medium: theme.heights.button.md,
+    large: theme.heights.button.lg,
+  }[size];
+  
+  // Determine icon size based on button size
+  const iconSize = {
+    small: 16,
+    medium: 20,
+    large: 24,
+  }[size];
+  
+  // Common touchable props
+  const touchableProps = {
+    onPress: disabled || isLoading ? null : onPress,
+    activeOpacity: 0.8,
+    disabled,
+    ...pressHandlers,
   };
   
-  const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 200, easing: Easing.elastic(1) });
-    glowOpacity.value = withSequence(
-      withTiming(0.8, { duration: 100 }),
-      withDelay(50, withTiming(0, { duration: 300 }))
-    );
-  };
-  
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
-  
-  const glowStyle = useAnimatedStyle(() => {
-    return {
-      opacity: glowOpacity.value,
-    };
-  });
-  
-  const getButtonStyles = () => {
-    let buttonStyles = [styles.button, styles[`${size}Button`]];
-    let textStyles = [styles.text, styles[`${size}Text`]];
-    let gradientColors = [];
+  // Determine content color based on variant
+  const getContentColor = () => {
+    if (disabled) return theme.colors.text.disabled;
     
     switch (variant) {
       case 'primary':
-        buttonStyles.push(styles.primaryButton);
-        textStyles.push(styles.primaryText);
-        gradientColors = theme.colors.gradients.accent;
-        break;
+        return theme.colors.text.inverse;
       case 'secondary':
-        buttonStyles.push(styles.secondaryButton);
-        textStyles.push(styles.secondaryText);
-        gradientColors = ['rgba(168, 148, 255, 0.2)', 'rgba(168, 148, 255, 0.1)'];
-        break;
+        return theme.colors.text.primary;
       case 'outline':
-        buttonStyles.push(styles.outlineButton);
-        textStyles.push(styles.outlineText);
-        gradientColors = ['transparent', 'transparent'];
-        break;
+        return theme.colors.accent.primary;
       case 'text':
-        buttonStyles.push(styles.textButton);
-        textStyles.push(styles.textOnlyText);
-        gradientColors = ['transparent', 'transparent'];
-        break;
+        return theme.colors.accent.primary;
+      default:
+        return theme.colors.text.primary;
     }
-    
-    if (fullWidth) {
-      buttonStyles.push(styles.fullWidth);
-    }
-    
-    if (disabled) {
-      buttonStyles.push(styles.disabledButton);
-      textStyles.push(styles.disabledText);
-      gradientColors = ['rgba(168, 148, 255, 0.1)', 'rgba(168, 148, 255, 0.05)'];
-    }
-    
-    return { buttonStyles, textStyles, gradientColors };
   };
   
-  const { buttonStyles, textStyles, gradientColors } = getButtonStyles();
+  // Render button content with icons
+  const renderContent = () => {
+    const contentColor = getContentColor();
+    
+    return (
+      <View style={styles.contentContainer}>
+        {isLoading ? (
+          <ActivityIndicator 
+            color={contentColor} 
+            size="small" 
+          />
+        ) : (
+          <>
+            {iconLeft && (
+              <Ionicons 
+                name={iconLeft} 
+                size={iconSize} 
+                color={contentColor} 
+                style={styles.iconLeft} 
+              />
+            )}
+            
+            <Text 
+              style={[
+                styles.buttonText,
+                { 
+                  color: contentColor,
+                  fontSize: size === 'small' ? 14 : size === 'large' ? 18 : 16,
+                },
+              ]}
+            >
+              {title}
+            </Text>
+            
+            {iconRight && (
+              <Ionicons 
+                name={iconRight} 
+                size={iconSize} 
+                color={contentColor} 
+                style={styles.iconRight} 
+              />
+            )}
+          </>
+        )}
+      </View>
+    );
+  };
   
-  const renderButtonContent = () => (
-    <>
-      {loading ? (
-        <ActivityIndicator 
-          color={variant === 'primary' ? theme.colors.text.primary : theme.colors.accent.primary} 
-          size="small" 
-        />
-      ) : (
-        <View style={styles.contentContainer}>
-          {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
-          <Text style={[...textStyles]}>{title}</Text>
-          {rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
-        </View>
-      )}
-    </>
-  );
+  // Render button based on variant
+  const renderButton = () => {
+    const gradientColors = disabled 
+      ? ['rgba(100, 100, 100, 0.2)', 'rgba(80, 80, 80, 0.3)'] 
+      : theme.colors.gradients.accent;
+      
+    switch (variant) {
+      case 'primary':
+        return (
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[
+              styles.button,
+              styles.primaryButton,
+              { height: buttonHeight },
+              style,
+            ]}
+          >
+            {renderContent()}
+          </LinearGradient>
+        );
+        
+      case 'secondary':
+        return (
+          <View
+            style={[
+              styles.button,
+              styles.secondaryButton,
+              { height: buttonHeight },
+              style,
+            ]}
+          >
+            {renderContent()}
+          </View>
+        );
+        
+      case 'outline':
+        return (
+          <View
+            style={[
+              styles.button,
+              styles.outlineButton,
+              { height: buttonHeight },
+              disabled && styles.disabledOutlineButton,
+              style,
+            ]}
+          >
+            {renderContent()}
+          </View>
+        );
+        
+      case 'text':
+        return (
+          <View
+            style={[
+              styles.button,
+              styles.textButton,
+              { height: buttonHeight },
+              style,
+            ]}
+          >
+            {renderContent()}
+          </View>
+        );
+        
+      default:
+        return null;
+    }
+  };
   
   return (
-    <AnimatedTouchable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled || loading}
-      style={[animatedStyle, ...buttonStyles, style]}
-      activeOpacity={0.9}
+    <TouchableOpacity 
+      {...touchableProps}
+      style={[animatedStyle, styles.touchable]}
     >
-      {variant !== 'text' && (
-        <AnimatedLinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      
-      {variant === 'primary' && (
-        <Animated.View style={[styles.glow, glowStyle]}>
-          <BlurView intensity={25} style={StyleSheet.absoluteFill} />
-        </Animated.View>
-      )}
-      
-      {renderButtonContent()}
-    </AnimatedTouchable>
+      {renderButton()}
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
+  touchable: {
+    alignSelf: 'center',
+  },
   button: {
-    borderRadius: theme.borderRadius.medium,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(168, 148, 255, 0.3)',
-  },
-  smallButton: {
-    paddingVertical: theme.spacing.s,
-    paddingHorizontal: theme.spacing.m,
-    minHeight: 36,
-  },
-  mediumButton: {
-    paddingVertical: theme.spacing.m,
-    paddingHorizontal: theme.spacing.l,
-    minHeight: 48,
-  },
-  largeButton: {
-    paddingVertical: theme.spacing.l,
-    paddingHorizontal: theme.spacing.xl,
-    minHeight: 56,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+    minWidth: 120,
   },
   primaryButton: {
-    backgroundColor: 'rgba(168, 148, 255, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.accent.glow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
   },
   secondaryButton: {
-    backgroundColor: 'rgba(11, 11, 35, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   outlineButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: theme.colors.accent.primary,
   },
+  disabledOutlineButton: {
+    borderColor: theme.colors.text.disabled,
+  },
   textButton: {
     backgroundColor: 'transparent',
-    borderWidth: 0,
-    paddingHorizontal: theme.spacing.s,
-  },
-  fullWidth: {
-    width: width - theme.spacing.xl * 2,
-    alignSelf: 'center',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  text: {
-    fontFamily: theme.typography.fonts.mono.medium,
-    color: theme.colors.text.primary,
-    textAlign: 'center',
-  },
-  smallText: {
-    fontSize: theme.typography.sizes.bodySmall,
-  },
-  mediumText: {
-    fontSize: theme.typography.sizes.body,
-  },
-  largeText: {
-    fontSize: theme.typography.sizes.heading4,
-  },
-  primaryText: {
-    color: theme.colors.text.primary,
-  },
-  secondaryText: {
-    color: theme.colors.text.primary,
-  },
-  outlineText: {
-    color: theme.colors.accent.primary,
-  },
-  textOnlyText: {
-    color: theme.colors.accent.primary,
-  },
-  disabledText: {
-    color: theme.colors.text.muted,
-  },
-  glow: {
-    position: 'absolute',
-    top: -20,
-    left: -20,
-    right: -20,
-    bottom: -20,
-    backgroundColor: theme.colors.accent.primary,
-    opacity: 0,
+    paddingHorizontal: theme.spacing.sm,
+    minWidth: 0,
   },
   contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonText: {
+    ...theme.typography.styles.bodyRegular,
+    fontFamily: theme.typography.fonts.primary.medium,
+    textAlign: 'center',
+  },
   iconLeft: {
-    marginRight: theme.spacing.s,
+    marginRight: theme.spacing.xs,
   },
   iconRight: {
-    marginLeft: theme.spacing.s,
+    marginLeft: theme.spacing.xs,
   },
 });
 

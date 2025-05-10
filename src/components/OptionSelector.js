@@ -1,171 +1,110 @@
+/**
+ * Option selector component for choosing from a list of options
+ */
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Dimensions 
-} from 'react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withSequence,
-  Easing
-} from 'react-native-reanimated';
+import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import GlassmorphicCard from './GlassmorphicCard';
 import theme from '../theme';
 
-const { width } = Dimensions.get('window');
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
+/**
+ * Selectable option card with icon, title, and description
+ * @param {Object} props - Component props
+ * @param {string} props.title - Option title
+ * @param {string} props.description - Option description
+ * @param {string} props.icon - Icon name from Ionicons
+ * @param {boolean} props.selected - Whether this option is selected
+ * @param {Function} props.onSelect - Callback function when option is selected
+ * @param {Object} props.style - Additional style for the component
+ * @returns {React.ReactElement} - Rendered component
+ */
 const OptionSelector = ({
-  options,
-  selectedOption,
+  title,
+  description,
+  icon,
+  selected = false,
   onSelect,
-  style
+  style,
 }) => {
-  // Animation values for each option
-  const animations = options.map(() => ({
-    scale: useSharedValue(1),
-    glow: useSharedValue(0)
-  }));
-  
-  const handlePress = (option, index) => {
-    // Animate the selected option
-    animations[index].scale.value = withSequence(
-      withTiming(0.95, { duration: 100 }),
-      withTiming(1.05, { duration: 150 }),
-      withTiming(1, { duration: 200, easing: Easing.elastic(1.2) })
-    );
-    
-    animations[index].glow.value = withSequence(
-      withTiming(1, { duration: 150 }),
-      withTiming(0, { duration: 1500 })
-    );
-    
-    onSelect(option);
-  };
-  
-  // Generate animated styles for each option
-  const getAnimatedStyles = (index) => {
-    const scaleStyle = useAnimatedStyle(() => {
-      return {
-        transform: [{ scale: animations[index].scale.value }]
-      };
-    });
-    
-    const glowStyle = useAnimatedStyle(() => {
-      return {
-        opacity: animations[index].glow.value,
-      };
-    });
-    
-    return { scaleStyle, glowStyle };
-  };
-  
   return (
-    <View style={[styles.container, style]}>
-      {options.map((option, index) => {
-        const isSelected = option.value === selectedOption;
-        const { scaleStyle, glowStyle } = getAnimatedStyles(index);
+    <GlassmorphicCard
+      onPress={onSelect}
+      style={[styles.container, style]}
+      isActive={selected}
+      intensity={selected ? 'high' : 'medium'}
+    >
+      <View style={styles.content}>
+        <View style={[styles.iconContainer, selected && styles.selectedIconContainer]}>
+          <Ionicons
+            name={icon}
+            size={24}
+            color={selected ? theme.colors.text.inverse : theme.colors.accent.primary}
+          />
+        </View>
         
-        return (
-          <AnimatedTouchable
-            key={option.value}
-            style={[
-              styles.option,
-              isSelected && styles.selectedOption,
-              scaleStyle
-            ]}
-            onPress={() => handlePress(option.value, index)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={isSelected 
-                ? ['rgba(168, 148, 255, 0.3)', 'rgba(168, 148, 255, 0.1)']
-                : ['rgba(35, 35, 60, 0.6)', 'rgba(20, 20, 40, 0.4)']}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+        <View style={styles.textContainer}>
+          <Text style={[styles.title, selected && styles.selectedTitle]}>
+            {title}
+          </Text>
+          <Text style={styles.description}>
+            {description}
+          </Text>
+        </View>
+        
+        {selected && (
+          <View style={styles.checkmarkContainer}>
+            <Ionicons
+              name="checkmark-circle"
+              size={22}
+              color={theme.colors.accent.primary}
             />
-            
-            <BlurView intensity={10} style={StyleSheet.absoluteFill} />
-            
-            {isSelected && (
-              <Animated.View style={[styles.glow, glowStyle]}>
-                <BlurView intensity={30} style={StyleSheet.absoluteFill} />
-              </Animated.View>
-            )}
-            
-            {option.icon && (
-              <View style={styles.iconContainer}>
-                {option.icon}
-              </View>
-            )}
-            
-            <Text style={[
-              styles.optionText,
-              isSelected && styles.selectedOptionText
-            ]}>
-              {option.label}
-            </Text>
-            
-            {option.description && (
-              <Text style={styles.descriptionText}>
-                {option.description}
-              </Text>
-            )}
-          </AnimatedTouchable>
-        );
-      })}
-    </View>
+          </View>
+        )}
+      </View>
+    </GlassmorphicCard>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    width: width - theme.spacing.xl * 2,
-    alignSelf: 'center',
+    width: '100%',
+    marginVertical: theme.spacing.xs,
   },
-  option: {
-    borderRadius: theme.borderRadius.medium,
-    marginBottom: theme.spacing.m,
-    padding: theme.spacing.l,
-    borderWidth: 1,
-    borderColor: 'rgba(168, 148, 255, 0.2)',
-    overflow: 'hidden',
-  },
-  selectedOption: {
-    borderColor: theme.colors.accent.primary,
-  },
-  glow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.accent.primary,
-    opacity: 0,
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
   },
   iconContainer: {
-    marginBottom: theme.spacing.s,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(168, 148, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.md,
   },
-  optionText: {
-    fontFamily: theme.typography.fonts.serif.medium,
-    fontSize: theme.typography.sizes.heading4,
+  selectedIconContainer: {
+    backgroundColor: theme.colors.accent.primary,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  title: {
+    ...theme.typography.styles.bodyLarge,
+    fontFamily: theme.typography.fonts.primary.medium,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
-  selectedOptionText: {
-    color: theme.colors.text.primary,
+  selectedTitle: {
+    color: theme.colors.accent.primary,
   },
-  descriptionText: {
-    fontFamily: theme.typography.fonts.serif.regular,
-    fontSize: theme.typography.sizes.bodySmall,
-    color: theme.colors.text.secondary,
-    lineHeight: theme.typography.lineHeights.bodySmall,
+  description: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+  },
+  checkmarkContainer: {
+    marginLeft: theme.spacing.sm,
   },
 });
 
