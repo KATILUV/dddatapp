@@ -194,50 +194,45 @@ const InsightsDashboardScreen = ({ navigation }) => {
       try {
         setIsAnalyzing(true);
         
-        // Fetch data sources
-        const dataSources = await api.getDataSources();
+        // Fetch data sources directly from our basic server
+        const sourcesResponse = await fetch('/api/data-sources');
+        if (!sourcesResponse.ok) {
+          throw new Error('Failed to fetch data sources');
+        }
+        const dataSources = await sourcesResponse.json();
         const hasDataSources = dataSources && dataSources.length > 0;
         setHasData(hasDataSources);
         
-        // Fetch insights
-        const insightsData = await api.getInsights();
+        // Fetch insights directly from our basic server
+        const insightsResponse = await fetch('/api/insights');
+        if (!insightsResponse.ok) {
+          throw new Error('Failed to fetch insights');
+        }
+        const insightsData = await insightsResponse.json();
+        
         if (insightsData && insightsData.length > 0) {
-          // Transform API data to match our UI format
-          const formattedInsights = insightsData.map(insight => ({
-            id: insight.id.toString(),
-            title: insight.title,
-            description: insight.summary,
-            category: insight.type === 'behavioral' ? 'communication' : 
-                      insight.type === 'creative' ? 'preferences' : 'wellness',
-            date: insight.createdAt || new Date().toISOString(),
-            icon: insight.type === 'behavioral' ? 'chatbubbles' :
-                  insight.type === 'creative' ? 'star' : 'trending-down',
-            color: insight.type === 'behavioral' ? theme.colors.accent.primary :
-                   insight.type === 'creative' ? theme.colors.warning.default : theme.colors.success.default,
-            confidence: insight.confidence || 85
-          }));
-          
-          setInsights(formattedInsights);
-        } else if (hasDataSources) {
-          // If we have data sources but no insights, fall back to generated insights
-          const generatedInsights = await analyzeDataSources(dataSources);
-          setInsights(generatedInsights);
+          // Use the insights as they are (our backend already formats them correctly)
+          setInsights(insightsData);
+        } else if (hasDataSources && dataSources.length >= 2) {
+          // If we have enough data sources but no insights, we'll let the user generate manually
+          console.log('No insights found but data sources exist, ready for generation');
         }
       } catch (error) {
         console.error('Error fetching data:', error);
         
-        // Fallback to local data if API fails
+        // If API fails, show empty state with generate option
+        setIsAnalyzing(false);
+        
+        // Check if we at least have data sources
         try {
-          const dataSources = await getData('dataSources');
-          const hasDataSources = dataSources && dataSources.length > 0;
-          setHasData(hasDataSources);
-          
-          if (hasDataSources) {
-            const generatedInsights = await analyzeDataSources(dataSources);
-            setInsights(generatedInsights);
+          const sourcesResponse = await fetch('/api/data-sources');
+          if (sourcesResponse.ok) {
+            const dataSources = await sourcesResponse.json();
+            setHasData(dataSources && dataSources.length > 0);
           }
-        } catch (localError) {
-          console.error('Error with fallback data:', localError);
+        } catch (dataError) {
+          console.error('Error checking data sources:', dataError);
+          setHasData(false);
         }
       } finally {
         setIsAnalyzing(false);
@@ -247,6 +242,68 @@ const InsightsDashboardScreen = ({ navigation }) => {
     fetchData();
   }, []);
   
+  // Generate a new insight using OpenAI
+  const generateNewInsight = async () => {
+    setIsAnalyzing(true);
+    
+    try {
+      // Get user's data sources
+      const response = await fetch('/api/data-sources');
+      if (!response.ok) {
+        throw new Error('Failed to fetch data sources');
+      }
+      const dataSources = await response.json();
+      
+      // Prepare data samples (in a real app, these would be actual data from the sources)
+      const dataSamples = [
+        "User frequently posts about technology topics, especially AI and machine learning.",
+        "Communication patterns show increased activity in the evenings, particularly between 8-10pm.",
+        "Content creation focuses on educational and informative material rather than entertainment.",
+        "Search history indicates strong interest in productivity tools and time management techniques.",
+        "Reading patterns show preference for in-depth technical articles over news summaries."
+      ];
+      
+      // Call the OpenAI-powered insight generation endpoint
+      const insightResponse = await fetch('/api/generate-insight', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dataSamples,
+          dataTypes: dataSources.map(source => source.sourceType),
+          userId: '1', // In a real app, this would be the actual user ID
+        }),
+      });
+      
+      if (!insightResponse.ok) {
+        throw new Error('Failed to generate insight');
+      }
+      
+      // Parse the generated insight
+      const newInsight = await insightResponse.json();
+      
+      // Add to insights state
+      setInsights([newInsight, ...insights]);
+      
+      // Alert user
+      Alert.alert(
+        "New Insight Generated",
+        "A personalized insight has been generated based on your data.",
+        [{ text: "OK" }]
+      );
+    } catch (error) {
+      console.error('Error generating insight:', error);
+      Alert.alert(
+        "Error",
+        "Failed to generate a new insight. Please try again later.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const renderPlaceholder = () => (
     <Animated.View style={[styles.placeholder, contentAnim]}>
       <AnimatedOrb size="small" enhanced3d glow />
@@ -254,13 +311,22 @@ const InsightsDashboardScreen = ({ navigation }) => {
       <Text style={styles.placeholderText}>
         Upload your data from social media, notes, or other sources to see personalized insights.
       </Text>
-      <Button
-        title="Add Data"
-        onPress={() => navigation.navigate('DataConnection')}
-        variant="primary"
-        iconRight="cloud-upload"
-        style={styles.placeholderButton}
-      />
+      <View style={styles.placeholderButtonsContainer}>
+        <Button
+          title="Add Data"
+          onPress={() => navigation.navigate('DataConnection')}
+          variant="primary"
+          iconRight="cloud-upload"
+          style={styles.placeholderButton}
+        />
+        <Button
+          title="Generate Demo Insight"
+          onPress={generateNewInsight}
+          variant="outline"
+          iconRight="analytics"
+          style={styles.placeholderButton}
+        />
+      </View>
     </Animated.View>
   );
   
@@ -279,17 +345,38 @@ const InsightsDashboardScreen = ({ navigation }) => {
   const renderInsightCard = (insight) => {
     const isExpanded = expandedInsights[insight.id] || false;
     
+    // Format insight date nicely
+    const formattedDate = new Date(insight.date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    // Use background opacity for the icon background
+    const iconBgColor = insight.color && insight.color.startsWith('#') 
+      ? `${insight.color}20` 
+      : 'rgba(124, 77, 255, 0.2)'; // Fallback color with opacity
+    
+    // Ensure we have valid values for all properties
+    const safeInsight = {
+      ...insight,
+      category: insight.category || 'general',
+      icon: insight.icon || 'analytics',
+      color: insight.color || theme.colors.accent.primary
+    };
+    
     return (
-      <GlassmorphicCard key={insight.id} style={styles.insightCard}>
+      <GlassmorphicCard key={safeInsight.id} style={styles.insightCard}>
         <View style={styles.insightHeader}>
-          <View style={[styles.insightIcon, { backgroundColor: `${insight.color}20` }]}>
-            <Ionicons name={insight.icon} size={22} color={insight.color} />
+          <View style={[styles.insightIcon, { backgroundColor: iconBgColor }]}>
+            <Ionicons name={safeInsight.icon} size={22} color={safeInsight.color} />
           </View>
-          <Text style={styles.insightCategory}>{insight.category.toUpperCase()}</Text>
+          <Text style={styles.insightCategory}>{safeInsight.category.toUpperCase()}</Text>
+          <Text style={styles.insightDate}>{formattedDate}</Text>
         </View>
         
-        <Text style={styles.insightTitle}>{insight.title}</Text>
-        <Text style={styles.insightDescription}>{insight.description}</Text>
+        <Text style={styles.insightTitle}>{safeInsight.title}</Text>
+        <Text style={styles.insightDescription}>{safeInsight.description}</Text>
         
         <View style={styles.insightFooter}>
           <TouchableOpacity 
@@ -390,6 +477,20 @@ const InsightsDashboardScreen = ({ navigation }) => {
                 
                 <GlassmorphicCard style={styles.suggestionCard}>
                   <View style={styles.suggestionContent}>
+                    <Ionicons name="analytics" size={22} color={theme.colors.accent.primary} />
+                    <Text style={styles.suggestionText}>Generate a new insight from your data</Text>
+                  </View>
+                  <Button
+                    title="Generate"
+                    onPress={generateNewInsight}
+                    variant="outline"
+                    size="small"
+                    isLoading={isAnalyzing}
+                  />
+                </GlassmorphicCard>
+                
+                <GlassmorphicCard style={styles.suggestionCard}>
+                  <View style={styles.suggestionContent}>
                     <Ionicons name="add-circle" size={22} color={theme.colors.accent.primary} />
                     <Text style={styles.suggestionText}>Upload more data for deeper insights</Text>
                   </View>
@@ -404,7 +505,7 @@ const InsightsDashboardScreen = ({ navigation }) => {
                 <GlassmorphicCard style={styles.suggestionCard}>
                   <View style={styles.suggestionContent}>
                     <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.accent.primary} />
-                    <Text style={styles.suggestionText}>Ask Voa about these insights</Text>
+                    <Text style={styles.suggestionText}>Ask Solstice about these insights</Text>
                   </View>
                   <Button
                     title="Chat"
@@ -489,6 +590,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
+    width: '100%',
+    justifyContent: 'flex-start',
   },
   insightIcon: {
     width: 32,
@@ -502,6 +605,11 @@ const styles = StyleSheet.create({
     ...theme.typography.styles.caption,
     color: theme.colors.text.tertiary,
     letterSpacing: theme.typography.letterSpacing.wide,
+  },
+  insightDate: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.tertiary,
+    marginLeft: 'auto',
   },
   insightTitle: {
     ...theme.typography.styles.h4,
@@ -579,8 +687,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
   },
-  placeholderButton: {
+  placeholderButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
     marginTop: theme.spacing.md,
+  },
+  placeholderButton: {
+    flex: 1,
+    marginHorizontal: theme.spacing.xs,
   },
   loadingContainer: {
     flex: 1,

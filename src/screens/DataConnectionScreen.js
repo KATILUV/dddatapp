@@ -139,16 +139,27 @@ const DataConnectionScreen = ({ navigation }) => {
   const handleConnectSource = async (sourceId) => {
     try {
       setLoading(true);
-      await api.addDataSource({
-        name: sourceId.charAt(0).toUpperCase() + sourceId.slice(1),
+      // Get the provider details for the name
+      const provider = dataSourceProviders.find(p => p.id === sourceId) || { name: sourceId };
+      
+      // Add the data source with the API
+      const newSource = await api.addDataSource({
+        name: provider.name,
         sourceType: sourceId,
         status: 'connected',
-        lastSynced: new Date().toISOString()
+        lastSynced: new Date().toISOString(),
+        dataSize: Math.floor(Math.random() * 10000) // Random size for demo
       });
+      
+      // Add to the local state to show immediately
+      setConnectedSources(prev => [...prev, newSource]);
+      
+      Alert.alert('Success', `Connected to ${provider.name} successfully!`);
     } catch (error) {
-      console.error('Error starting OAuth flow:', error);
-      setLoading(false);
+      console.error('Error connecting to data source:', error);
       Alert.alert('Error', 'Failed to connect to the selected service.');
+    } finally {
+      setLoading(false);
     }
   };
   
