@@ -116,7 +116,7 @@ async function registerRoutes(app) {
             const userId = req.user.claims.sub;
             const redirectUri = `${req.protocol}://${req.get('host')}/api/oauth/callback`;
             // Use the OAuth service from our server/oauth-service.ts
-            const authUrl = await import('./oauth-service').then(module => module.getAuthorizationUrl(provider, userId, redirectUri));
+            const authUrl = await import('./oauth-service.js').then(module => module.getAuthorizationUrl(provider, userId, redirectUri));
             res.json({ authUrl });
         }
         catch (error) {
@@ -127,7 +127,7 @@ async function registerRoutes(app) {
     app.get('/api/oauth/callback', async (req, res) => {
         try {
             // Use the OAuth callback handler from our server/oauth-service.ts
-            await import('./oauth-service').then(module => module.handleOAuthCallback(req, res));
+            await import('./oauth-service.js').then(module => module.handleOAuthCallback(req, res));
         }
         catch (error) {
             console.error('Error handling OAuth callback:', error);

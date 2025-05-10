@@ -132,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const redirectUri = `${req.protocol}://${req.get('host')}/api/oauth/callback`;
       
       // Use the OAuth service from our server/oauth-service.ts
-      const authUrl = await import('./oauth-service').then(module => 
+      const authUrl = await import('./oauth-service.js').then(module => 
         module.getAuthorizationUrl(provider, userId, redirectUri)
       );
       
@@ -146,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/oauth/callback', async (req, res) => {
     try {
       // Use the OAuth callback handler from our server/oauth-service.ts
-      await import('./oauth-service').then(module => 
+      await import('./oauth-service.js').then(module => 
         module.handleOAuthCallback(req, res)
       );
     } catch (error) {

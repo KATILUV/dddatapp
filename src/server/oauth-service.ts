@@ -2,8 +2,22 @@ import { Request, Response } from 'express';
 import { storage } from './storage';
 import axios from 'axios';
 
+// Define the types for our OAuth configuration
+type OAuthProviderConfig = {
+  authorizeUrl: string;
+  tokenUrl: string;
+  clientId: string | undefined;
+  clientSecret: string | undefined;
+  scopes: string[];
+  userInfoUrl: string;
+};
+
+type OAuthConfigs = {
+  [key: string]: OAuthProviderConfig;
+};
+
 // OAuth configuration for different providers
-const oauthConfigs = {
+const oauthConfigs: OAuthConfigs = {
   google: {
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
@@ -69,15 +83,16 @@ export async function handleOAuthCallback(req: Request, res: Response): Promise<
     }
     
     // Exchange code for tokens
+    const params = new URLSearchParams();
+    params.append('grant_type', 'authorization_code');
+    params.append('code', code.toString());
+    params.append('redirect_uri', `${req.protocol}://${req.get('host')}/api/oauth/callback`);
+    if (config.clientId) params.append('client_id', config.clientId);
+    if (config.clientSecret) params.append('client_secret', config.clientSecret);
+    
     const tokenResponse = await axios.post(
       config.tokenUrl,
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code.toString(),
-        redirect_uri: `${req.protocol}://${req.get('host')}/api/oauth/callback`,
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-      }).toString(),
+      params.toString(),
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -166,14 +181,15 @@ export async function refreshToken(dataSourceId: number): Promise<string> {
     }
     
     // Exchange refresh token for new access token
+    const params = new URLSearchParams();
+    params.append('grant_type', 'refresh_token');
+    params.append('refresh_token', storedToken.refreshToken);
+    if (config.clientId) params.append('client_id', config.clientId);
+    if (config.clientSecret) params.append('client_secret', config.clientSecret);
+    
     const tokenResponse = await axios.post(
       config.tokenUrl,
-      new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: storedToken.refreshToken,
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-      }).toString(),
+      params.toString(),
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

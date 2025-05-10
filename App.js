@@ -13,6 +13,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import GradientBackground from './src/components/GradientBackground';
 import AnimatedOrb from './src/components/AnimatedOrb';
 import { getData, storeData } from './src/utils/storage';
+import { AuthProvider } from './src/hooks/useAuth';
 
 export default function App() {
   const [isFirstLaunch, setIsFirstLaunch] = useState(null);
@@ -78,12 +79,14 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider theme={theme}>
-        <NavigationContainer>
-          <GradientBackground>
-            <StatusBar style="light" />
-            <AppNavigator isFirstLaunch={isFirstLaunch} />
-          </GradientBackground>
-        </NavigationContainer>
+        <AuthProvider>
+          <NavigationContainer>
+            <GradientBackground>
+              <StatusBar style="light" />
+              <AppNavigator isFirstLaunch={isFirstLaunch} />
+            </GradientBackground>
+          </NavigationContainer>
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

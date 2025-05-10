@@ -117,7 +117,7 @@ apiRouter.get('/api/oauth/authorize/:provider', async (req, res) => {
     }
     catch (error) {
         console.error('Error generating auth URL:', error);
-        res.status(500).json({ message: error.message || 'Failed to generate auth URL' });
+        res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to generate auth URL' });
     }
 });
 apiRouter.get('/api/oauth/callback', oauth_service_1.handleOAuthCallback);

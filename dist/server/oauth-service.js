@@ -67,13 +67,15 @@ async function handleOAuthCallback(req, res) {
             throw new Error(`Provider '${provider}' not configured`);
         }
         // Exchange code for tokens
-        const tokenResponse = await axios_1.default.post(config.tokenUrl, new URLSearchParams({
-            grant_type: 'authorization_code',
-            code: code.toString(),
-            redirect_uri: `${req.protocol}://${req.get('host')}/api/oauth/callback`,
-            client_id: config.clientId,
-            client_secret: config.clientSecret,
-        }).toString(), {
+        const params = new URLSearchParams();
+        params.append('grant_type', 'authorization_code');
+        params.append('code', code.toString());
+        params.append('redirect_uri', `${req.protocol}://${req.get('host')}/api/oauth/callback`);
+        if (config.clientId)
+            params.append('client_id', config.clientId);
+        if (config.clientSecret)
+            params.append('client_secret', config.clientSecret);
+        const tokenResponse = await axios_1.default.post(config.tokenUrl, params.toString(), {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
@@ -151,12 +153,14 @@ async function refreshToken(dataSourceId) {
             throw new Error(`Provider '${dataSource.sourceType}' not configured`);
         }
         // Exchange refresh token for new access token
-        const tokenResponse = await axios_1.default.post(config.tokenUrl, new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: storedToken.refreshToken,
-            client_id: config.clientId,
-            client_secret: config.clientSecret,
-        }).toString(), {
+        const params = new URLSearchParams();
+        params.append('grant_type', 'refresh_token');
+        params.append('refresh_token', storedToken.refreshToken);
+        if (config.clientId)
+            params.append('client_id', config.clientId);
+        if (config.clientSecret)
+            params.append('client_secret', config.clientSecret);
+        const tokenResponse = await axios_1.default.post(config.tokenUrl, params.toString(), {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
