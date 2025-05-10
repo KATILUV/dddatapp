@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="300" height="600" viewBox="0 0 300 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="600" rx="20" fill="url(#backgroundGradient)" />
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="300" height="60" fill="rgba(11, 11, 35, 0.5)" />
+  <text x="150" y="35" font-family="Arial" font-size="16" font-weight="bold" letter-spacing="1.5" fill="#F8E9B4" text-anchor="middle">SETTINGS</text>
+  
+  <!-- Profile Card -->
+  <rect x="15" y="70" width="270" height="90" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  
+  <!-- Profile Icon with Orb -->
+  <circle cx="40" cy="105" r="20" fill="url(#orbGradient)" opacity="0.8" />
+  <circle cx="40" cy="105" r="12" fill="url(#orbGradient)" opacity="0.6" />
+  <circle cx="40" cy="105" r="6" fill="url(#orbGradient)" />
+  
+  <!-- Profile Details -->
+  <text x="75" y="100" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Alex</text>
+  <text x="75" y="120" font-family="Arial" font-size="10" fill="#D2D2EF">Analytical communication style</text>
+  
+  <!-- Edit Profile Button -->
+  <rect x="194" y="95" width="80" height="25" rx="12.5" fill="rgba(168, 148, 255, 0.15)" stroke="rgba(168, 148, 255, 0.3)" stroke-width="1" />
+  <text x="234" y="110" font-family="Arial" font-size="10" fill="#A894FF" text-anchor="middle">Edit Profile</text>
+  
+  <!-- App Settings Section -->
+  <text x="20" y="180" font-family="Arial" font-size="10" letter-spacing="1.5" fill="#D2D2EF">APP SETTINGS</text>
+  
+  <!-- Settings Card -->
+  <rect x="15" y="190" width="270" height="160" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  
+  <!-- Notifications Setting -->
+  <text x="45" y="215" font-family="Arial" font-size="12" fill="#F8E9B4">Notifications</text>
+  <text x="30" y="215" font-family="Arial" font-size="14" fill="#F8E9B4">🔔</text>
+  <!-- Toggle Switch (ON) -->
+  <rect x="225" y="205" width="40" height="20" rx="10" fill="rgba(168, 148, 255, 0.6)" />
+  <circle cx="255" cy="215" r="9" fill="#A894FF" />
+  
+  <line x1="15" y1="230" x2="285" y2="230" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <!-- Dark Mode Setting -->
+  <text x="45" y="255" font-family="Arial" font-size="12" fill="#F8E9B4">Dark Mode</text>
+  <text x="30" y="255" font-family="Arial" font-size="14" fill="#F8E9B4">🌙</text>
+  <!-- Toggle Switch (ON) -->
+  <rect x="225" y="245" width="40" height="20" rx="10" fill="rgba(168, 148, 255, 0.6)" />
+  <circle cx="255" cy="255" r="9" fill="#A894FF" />
+  
+  <line x1="15" y1="270" x2="285" y2="270" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <!-- Data Processing Setting -->
+  <text x="45" y="295" font-family="Arial" font-size="12" fill="#F8E9B4">Data Processing</text>
+  <text x="30" y="295" font-family="Arial" font-size="14" fill="#F8E9B4">📊</text>
+  <!-- Toggle Switch (ON) -->
+  <rect x="225" y="285" width="40" height="20" rx="10" fill="rgba(168, 148, 255, 0.6)" />
+  <circle cx="255" cy="295" r="9" fill="#A894FF" />
+  
+  <line x1="15" y1="310" x2="285" y2="310" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <!-- Enhanced Profiling Setting -->
+  <text x="45" y="335" font-family="Arial" font-size="12" fill="#F8E9B4">Enhanced Profiling</text>
+  <text x="30" y="335" font-family="Arial" font-size="14" fill="#F8E9B4">🧪</text>
+  <!-- Toggle Switch (OFF) -->
+  <rect x="225" y="325" width="40" height="20" rx="10" fill="rgba(255, 255, 255, 0.1)" />
+  <circle cx="235" cy="335" r="9" fill="rgba(255, 255, 255, 0.5)" />
+  
+  <!-- Data Management Section -->
+  <text x="20" y="375" font-family="Arial" font-size="10" letter-spacing="1.5" fill="#D2D2EF">DATA MANAGEMENT</text>
+  
+  <!-- Data Management Card -->
+  <rect x="15" y="385" width="270" height="85" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  
+  <!-- Manage Data Sources -->
+  <text x="45" y="410" font-family="Arial" font-size="12" fill="#F8E9B4">Manage Data Sources</text>
+  <text x="30" y="410" font-family="Arial" font-size="14" fill="#F8E9B4">☁️</text>
+  <text x="270" y="410" font-family="Arial" font-size="14" fill="#D2D2EF">›</text>
+  
+  <line x1="15" y1="425" x2="285" y2="425" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <!-- Clear All Data -->
+  <text x="45" y="450" font-family="Arial" font-size="12" fill="#F8E9B4">Clear All Data</text>
+  <text x="30" y="450" font-family="Arial" font-size="14" fill="#F8E9B4">🗑</text>
+  <text x="270" y="450" font-family="Arial" font-size="14" fill="#D2D2EF">›</text>
+  
+  <!-- About Section -->
+  <text x="20" y="495" font-family="Arial" font-size="10" letter-spacing="1.5" fill="#D2D2EF">ABOUT</text>
+  
+  <!-- About Card -->
+  <rect x="15" y="505" width="270" height="85" rx="10" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+  
+  <!-- Version -->
+  <text x="30" y="530" font-family="Arial" font-size="12" fill="#D2D2EF">Version</text>
+  <text x="265" y="530" font-family="Arial" font-size="12" fill="#F8E9B4" text-anchor="end">1.0.0</text>
+  
+  <line x1="15" y1="545" x2="285" y2="545" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+  
+  <!-- Build -->
+  <text x="30" y="570" font-family="Arial" font-size="12" fill="#D2D2EF">Build</text>
+  <text x="265" y="570" font-family="Arial" font-size="12" fill="#F8E9B4" text-anchor="end">iOS 2023</text>
+  
+  <!-- Tab Bar -->
+  <!-- Omitted for clarity as it's at the bottom and partially covered by the About card -->
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="backgroundGradient" x1="0" y1="0" x2="0" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B0B23" />
+      <stop offset="1" stop-color="#151540" />
+    </linearGradient>
+    <linearGradient id="orbGradient" x1="20" y1="85" x2="60" y2="125" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A894FF" />
+      <stop offset="1" stop-color="#8F7BEE" />
+    </linearGradient>
+  </defs>
+</svg>
