@@ -5,10 +5,12 @@ const fs = require('fs');
 const QRCode = require('qrcode');
 const app = express();
 
-// Global variable to store the Expo URL
+// Global variables to store Expo information
 let expoUrl = '';
 let expoUrlLastUpdated = null;
 let expoStatus = 'Starting...';
+let expoLogs = [];
+const MAX_LOGS = 100; // Maximum number of log lines to keep
 
 // Serve static content
 app.use(express.static(path.join(__dirname, 'public')));
@@ -193,6 +195,7 @@ app.get('/', (req, res) => {
       <div class="status">
         ${expoStatus} <br>
         ${expoUrlLastUpdated ? `Last updated: ${new Date(expoUrlLastUpdated).toLocaleTimeString()}` : ''}
+        <a href="/logs" style="display:block; margin-top:10px; color:#FF0080; text-decoration:underline;">View Expo Logs</a>
       </div>
       
       ${expoUrl ? `
@@ -245,6 +248,103 @@ app.listen(PORT, '0.0.0.0', () => {
     });
   });
   
+  // Create a route to view all Expo logs
+  app.get('/logs', (req, res) => {
+    const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Expo Logs</title>
+      <style>
+        body {
+          font-family: monospace;
+          background-color: #1a1a1a;
+          color: #f0f0f0;
+          margin: 0;
+          padding: 20px;
+          line-height: 1.5;
+        }
+        .log-container {
+          background-color: #121212;
+          border-radius: 4px;
+          padding: 15px;
+          overflow-x: auto;
+        }
+        .log-line {
+          margin: 5px 0;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+        }
+        h1 {
+          margin-top: 0;
+          color: #e0e0e0;
+        }
+        .url {
+          background-color: #2a2a2a;
+          color: #90ee90;
+          padding: 10px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-weight: bold;
+          word-break: break-all;
+        }
+        .back-link {
+          display: inline-block;
+          margin-top: 20px;
+          color: #90ee90;
+          text-decoration: none;
+        }
+        .back-link:hover {
+          text-decoration: underline;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        .refresh {
+          background-color: #333;
+          color: white;
+          border: none;
+          padding: 8px 15px;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        .refresh:hover {
+          background-color: #444;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Expo Logs</h1>
+        <button class="refresh" onclick="location.reload()">Refresh Logs</button>
+      </div>
+      
+      ${expoUrl ? `<div class="url">Expo URL: ${expoUrl}</div>` : ''}
+      
+      <div class="log-container">
+        ${expoLogs.map(log => `<div class="log-line">${log}</div>`).join('')}
+      </div>
+      
+      <a href="/" class="back-link">← Back to QR Code</a>
+      
+      <script>
+        // Auto-refresh logs every 5 seconds
+        setTimeout(() => {
+          location.reload();
+        }, 5000);
+      </script>
+    </body>
+    </html>
+    `;
+    
+    res.send(html);
+  });
+  
   // Start Expo in the background using spawn to better capture output
   console.log('Starting Expo with tunneling enabled...');
   expoStatus = 'Starting Expo server...';
@@ -264,10 +364,22 @@ app.listen(PORT, '0.0.0.0', () => {
     const output = data.toString();
     console.log(`Expo: ${output}`);
     
-    // Look for tunnel URL in the output
-    const tunnelUrlMatch = output.match(/https:\/\/[a-z0-9-]+\.expo\.dev/i) || 
+    // Store logs
+    output.split('\n').filter(line => line.trim() !== '').forEach(line => {
+      expoLogs.unshift(`${new Date().toLocaleTimeString()}: ${line}`);
+      // Keep log size manageable
+      if (expoLogs.length > MAX_LOGS) {
+        expoLogs.pop();
+      }
+    });
+    
+    // Look for any URL in the output - be more permissive to catch all possible formats
+    const tunnelUrlMatch = output.match(/https:\/\/[a-z0-9-]+\.expo\.dev\/[a-z0-9\-_\/]+/i) || 
+                         output.match(/https:\/\/[a-z0-9-]+\.expo\.dev/i) || 
                          output.match(/exp:\/\/[a-z0-9.-]+\.exp\.dev/i) ||
-                         output.match(/exp:\/\/\d+\.\d+\.\d+\.\d+:\d+/i);
+                         output.match(/exp:\/\/\d+\.\d+\.\d+\.\d+:\d+/i) ||
+                         output.match(/exp:\/\/[a-z0-9\-_.]+/i) ||
+                         output.match(/http:\/\/localhost:19000/i);
     
     if (tunnelUrlMatch) {
       expoUrl = tunnelUrlMatch[0];
@@ -301,6 +413,15 @@ app.listen(PORT, '0.0.0.0', () => {
   expoProcess.stderr.on('data', (data) => {
     const errorOutput = data.toString();
     console.error(`Expo error: ${errorOutput}`);
+    
+    // Store error logs with error indicator
+    errorOutput.split('\n').filter(line => line.trim() !== '').forEach(line => {
+      expoLogs.unshift(`${new Date().toLocaleTimeString()}: [ERROR] ${line}`);
+      // Keep log size manageable
+      if (expoLogs.length > MAX_LOGS) {
+        expoLogs.pop();
+      }
+    });
     
     if (errorOutput.includes('--non-interactive is not supported')) {
       // That's fine, we're handling it with CI=1
