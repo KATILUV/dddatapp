@@ -29,13 +29,12 @@ if (!fs.existsSync(publicDir)) {
 
 // Route to serve QR code image
 app.get('/qr-code', async (req, res) => {
-  if (!expoUrl) {
-    return res.status(404).send('Expo URL not available yet');
-  }
+  // Default fallback URL if Expo URL not available yet
+  const url = expoUrl || 'exp://192.168.1.101:19000';
   
   try {
     // Generate QR code as data URL
-    const qrCodeDataUrl = await QRCode.toDataURL(expoUrl, { 
+    const qrCodeDataUrl = await QRCode.toDataURL(url, { 
       errorCorrectionLevel: 'H',
       margin: 1,
       width: 300,
@@ -59,6 +58,132 @@ app.get('/qr-code', async (req, res) => {
     console.error('Error generating QR code:', error);
     res.status(500).send('Error generating QR code');
   }
+});
+
+// Route to serve the static QR code page
+app.get('/expo-qr', (req, res) => {
+  const url = expoUrl || 'exp://192.168.1.101:19000';
+  const html = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expo QR Code</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #0B0B23;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px;
+        line-height: 1.6;
+      }
+      h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #7928CA, #FF0080);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .container {
+        max-width: 800px;
+        text-align: center;
+      }
+      .qr-container {
+        margin: 30px 0;
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        display: inline-block;
+      }
+      .qr-code {
+        width: 300px;
+        height: 300px;
+      }
+      .url-box {
+        margin: 20px 0;
+        background: rgba(255,255,255,0.1);
+        padding: 15px;
+        border-radius: 8px;
+        word-break: break-all;
+      }
+      .instructions {
+        background: rgba(255,255,255,0.05);
+        border-radius: 16px;
+        padding: 25px;
+        margin-bottom: 40px;
+        text-align: left;
+      }
+      .instructions ol {
+        margin-bottom: 0;
+      }
+      .instructions li {
+        margin-bottom: 10px;
+      }
+      .highlight {
+        color: #FF0080;
+        font-weight: 500;
+      }
+      a.button {
+        display: inline-block;
+        background: linear-gradient(135deg, #7928CA, #FF0080);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 500;
+        margin-top: 20px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      a.button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 0, 128, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>SOLSTICE</h1>
+      <p>Scan this QR code with Expo Go to view the app</p>
+      
+      <div class="instructions">
+        <h2>Instructions:</h2>
+        <ol>
+          <li>Open <span class="highlight">Expo Go</span> on your device</li>
+          <li>Tap on <span class="highlight">"Scan QR Code"</span></li>
+          <li>Point your camera at the QR code below</li>
+          <li>Wait for the app to download and start</li>
+        </ol>
+      </div>
+      
+      <div class="qr-container">
+        <img class="qr-code" src="/qr-code?t=${Date.now()}" alt="Expo QR Code">
+      </div>
+      
+      <div class="url-box">
+        ${url}
+      </div>
+      
+      <p>If the QR code doesn't work, try entering the URL manually in Expo Go</p>
+      
+      <a href="/" class="button">Back to Main Page</a>
+    </div>
+    
+    <script>
+      // Refresh page every 10 seconds to check for updated URL
+      setTimeout(() => {
+        window.location.reload();
+      }, 10000);
+    </script>
+  </body>
+  </html>
+  `;
+  
+  res.send(html);
 });
 
 // Create a route that displays the QR code and instructions
@@ -181,6 +306,13 @@ app.get('/', (req, res) => {
     <div class="container">
       <h1>SOLSTICE</h1>
       <div class="tagline">Own your data. Understand yourself.</div>
+      
+      <div style="margin-bottom: 20px">
+        <a href="/expo-qr" style="display: inline-block; background: linear-gradient(135deg, #7928CA, #FF0080); color: white; padding: 15px 30px; border-radius: 30px; text-decoration: none; font-weight: 500; font-size: 18px;">
+          View Static QR Code →
+        </a>
+        <p style="margin-top: 10px; opacity: 0.7;">Use this if the dynamic QR code below isn't working</p>
+      </div>
       
       <div class="steps">
         <h2>To view the app on your device:</h2>

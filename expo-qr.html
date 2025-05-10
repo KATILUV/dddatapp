@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expo QR Code</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0B0B23;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #7928CA, #FF0080);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .container {
+            max-width: 800px;
+            text-align: center;
+        }
+        .qr-container {
+            margin: 30px 0;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            display: inline-block;
+        }
+        .qr-code {
+            width: 300px;
+            height: 300px;
+        }
+        .url-box {
+            margin: 20px 0;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+        }
+        .instructions {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 40px;
+            text-align: left;
+        }
+        .instructions ol {
+            margin-bottom: 0;
+        }
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        .highlight {
+            color: #FF0080;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SOLSTICE</h1>
+        <p>Scan this QR code with Expo Go to view the app</p>
+        
+        <div class="instructions">
+            <h2>Instructions:</h2>
+            <ol>
+                <li>Open <span class="highlight">Expo Go</span> on your device</li>
+                <li>Tap on <span class="highlight">"Scan QR Code"</span></li>
+                <li>Point your camera at the QR code below</li>
+                <li>Wait for the app to download and start</li>
+            </ol>
+        </div>
+        
+        <div class="qr-container">
+            <!-- Static QR code for Expo Go -->
+            <img class="qr-code" src="data:image/png;base64,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" alt="Expo QR Code">
+        </div>
+        
+        <div class="url-box">
+            exp://192.168.1.101:19000
+        </div>
+        
+        <p>If the QR code doesn't work, try entering the URL manually in Expo Go</p>
+    </div>
+</body>
+</html>
