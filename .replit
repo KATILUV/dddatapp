@@ -24,10 +24,6 @@ args = "SimpleServer"
 task = "workflow.run"
 args = "BasicServer"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "ExpoServer"
-
 [[workflows.workflow]]
 name = "StaticServer"
 author = "agent"
@@ -54,15 +50,6 @@ author = "agent"
 task = "shell.exec"
 args = "node basic-server.js"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "ExpoServer"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npx expo start --web --no-dev --port=19006"
-waitForPort = 19006
 
 [deployment]
 run = ["sh", "-c", "npx expo start --web --port 5000 --no-dev"]
