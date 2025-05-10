@@ -245,6 +245,17 @@ const HomeScreen = ({ navigation }) => {
             <Ionicons name="people-outline" size={22} color={theme.colors.accent.primary} />
             <Text style={styles.dataCategoryText}>Social connections</Text>
           </View>
+          
+          {/* Simple graphic representation */}
+          <View style={styles.graphContainer}>
+            <View style={styles.graph}>
+              <View style={[styles.graphDot, {left: '20%'}]} />
+              <View style={[styles.graphDot, {left: '40%'}]} />
+              <View style={[styles.graphDot, {left: '60%'}]} />
+              <View style={[styles.graphDot, {left: '80%'}]} />
+              <View style={styles.graphLine} />
+            </View>
+          </View>
         </Animated.View>
       </ScrollView>
     </GradientBackground>
@@ -391,6 +402,51 @@ const styles = StyleSheet.create({
     ...theme.typography.styles.caption,
     color: theme.colors.text.secondary,
     letterSpacing: theme.typography.letterSpacing.wide,
+  },
+  dataCategories: {
+    marginTop: theme.spacing.xxl,
+    marginBottom: theme.spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: theme.spacing.xl,
+  },
+  dataCategoryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  dataCategoryText: {
+    ...theme.typography.styles.bodyRegular,
+    color: theme.colors.text.secondary,
+    marginLeft: theme.spacing.md,
+  },
+  graphContainer: {
+    marginTop: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    width: '100%',
+    height: 80,
+  },
+  graph: {
+    position: 'relative',
+    width: '100%',
+    height: 40,
+  },
+  graphDot: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.accent.primary,
+    top: 16,
+    zIndex: 2,
+  },
+  graphLine: {
+    position: 'absolute',
+    width: '100%',
+    height: 2,
+    backgroundColor: 'rgba(115, 83, 186, 0.3)',
+    top: 20,
+    borderRadius: 1,
   },
 });
 
