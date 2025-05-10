@@ -9,47 +9,47 @@
   <circle cx="150" cy="100" r="25" fill="url(#orbGradient)" />
   <circle cx="135" cy="85" r="10" fill="white" opacity="0.3" />
   
-  <!-- Title -->
-  <text x="150" y="190" font-family="Arial" font-size="22" font-weight="bold" fill="#F8E9B4" text-anchor="middle">Choose a tone</text>
+  <!-- Title - Uppercase and letter-spaced for modern look -->
+  <text x="150" y="190" font-family="Arial" font-size="18" font-weight="bold" fill="#F8E9B4" text-anchor="middle" letter-spacing="1.5">COMMUNICATION STYLE</text>
   
   <!-- Subtitle -->
-  <text x="150" y="220" font-family="Arial" font-size="12" fill="#EFD9D1" text-anchor="middle">How would you like Voa to communicate with you?</text>
+  <text x="150" y="220" font-family="Arial" font-size="12" fill="#EFD9D1" text-anchor="middle">Select how Voa will analyze and present your data</text>
   
   <!-- Option 1 - Selected -->
   <rect x="30" y="250" width="240" height="60" rx="12" fill="rgba(100, 100, 255, 0.15)" stroke="#A894FF" stroke-width="1.5" />
   <circle cx="55" cy="280" r="15" fill="#A894FF" />
-  <text x="55" y="284" font-family="Arial" font-size="14" fill="white" text-anchor="middle">📖</text>
-  <text x="85" y="270" font-family="Arial" font-size="14" font-weight="bold" fill="#A894FF">Poetic</text>
-  <text x="85" y="290" font-family="Arial" font-size="10" fill="#D2D2EF">Using metaphors and rich imagery to convey ideas</text>
+  <text x="55" y="284" font-family="Arial" font-size="14" fill="white" text-anchor="middle">⚙️</text>
+  <text x="85" y="270" font-family="Arial" font-size="14" font-weight="bold" fill="#A894FF">Analytical</text>
+  <text x="85" y="290" font-family="Arial" font-size="10" fill="#D2D2EF">Data-driven insights with precision and clarity</text>
   <circle cx="250" cy="280" r="8" fill="none" stroke="#A894FF" stroke-width="1.5" />
   <text x="250" y="284" font-family="Arial" font-size="12" fill="#A894FF" text-anchor="middle">✓</text>
   
   <!-- Option 2 -->
   <rect x="30" y="320" width="240" height="60" rx="12" fill="rgba(100, 100, 255, 0.05)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
   <circle cx="55" cy="350" r="15" fill="rgba(168, 148, 255, 0.1)" />
-  <text x="55" y="354" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">👋</text>
-  <text x="85" y="340" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Honest</text>
-  <text x="85" y="360" font-family="Arial" font-size="10" fill="#D2D2EF">Direct and straightforward, even when the truth is tough</text>
+  <text x="55" y="354" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">➜</text>
+  <text x="85" y="340" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Direct</text>
+  <text x="85" y="360" font-family="Arial" font-size="10" fill="#D2D2EF">Straightforward communication with actionable feedback</text>
   
   <!-- Option 3 -->
   <rect x="30" y="390" width="240" height="60" rx="12" fill="rgba(100, 100, 255, 0.05)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
   <circle cx="55" cy="420" r="15" fill="rgba(168, 148, 255, 0.1)" />
-  <text x="55" y="424" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">❤️</text>
-  <text x="85" y="410" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Soft</text>
-  <text x="85" y="430" font-family="Arial" font-size="10" fill="#D2D2EF">Gentle and encouraging, with an empathetic approach</text>
+  <text x="55" y="424" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">∞</text>
+  <text x="85" y="410" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Balanced</text>
+  <text x="85" y="430" font-family="Arial" font-size="10" fill="#D2D2EF">Thoughtful analysis with contextual perspective</text>
   
   <!-- Option 4 -->
   <rect x="30" y="460" width="240" height="60" rx="12" fill="rgba(100, 100, 255, 0.05)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
   <circle cx="55" cy="490" r="15" fill="rgba(168, 148, 255, 0.1)" />
-  <text x="55" y="494" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">✨</text>
-  <text x="85" y="480" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Neutral</text>
-  <text x="85" y="500" font-family="Arial" font-size="10" fill="#D2D2EF">Balanced and objective, focusing on the facts</text>
+  <text x="55" y="494" font-family="Arial" font-size="14" fill="#A894FF" text-anchor="middle">◊</text>
+  <text x="85" y="480" font-family="Arial" font-size="14" font-weight="bold" fill="#F8E9B4">Nuanced</text>
+  <text x="85" y="500" font-family="Arial" font-size="10" fill="#D2D2EF">Sophisticated interpretation with layered meaning</text>
   
-  <!-- Button -->
-  <rect x="90" y="540" width="120" height="40" rx="20" fill="url(#buttonGradient)" />
-  <text x="130" y="565" font-family="Arial" font-size="14" font-weight="bold" fill="#0B0B23" text-anchor="middle">Continue</text>
-  <circle cx="170" cy="560" r="10" fill="#0B0B23" />
-  <polyline points="166,560 170,564 174,560" stroke="white" stroke-width="2" fill="none" />
+  <!-- Button - More sleek with thinner border radius -->
+  <rect x="75" y="540" width="150" height="42" rx="8" fill="url(#buttonGradient)" />
+  <text x="135" y="565" font-family="Arial" font-size="14" font-weight="bold" fill="#0B0B23" text-anchor="middle">CONTINUE</text>
+  <circle cx="185" cy="560" r="10" fill="#0B0B23" />
+  <polyline points="181,560 185,564 189,560" stroke="white" stroke-width="2" fill="none" />
 
   <!-- Progress Dots -->
   <circle cx="130" cy="590" r="5" fill="#8F7BEE" opacity="0.6" />
@@ -67,7 +67,7 @@
       <stop offset="0" stop-color="#A894FF" />
       <stop offset="1" stop-color="#8F7BEE" />
     </linearGradient>
-    <linearGradient id="buttonGradient" x1="90" y1="540" x2="210" y2="580" gradientUnits="userSpaceOnUse">
+    <linearGradient id="buttonGradient" x1="75" y1="540" x2="225" y2="582" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#A894FF" />
       <stop offset="1" stop-color="#8F7BEE" />
     </linearGradient>

@@ -1,5 +1,5 @@
 /**
- * Onboarding screen for selecting preferred tone of conversation
+ * Onboarding screen for selecting preferred communication style
  */
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Animated } from 'react-native';
@@ -9,7 +9,7 @@ import theme from '../../theme';
 import { fadeInUp } from '../../utils/animations';
 
 /**
- * Tone selection screen in onboarding flow
+ * Communication style selection screen in onboarding flow
  * @param {Object} props - Component props
  * @param {Object} props.userData - User data object
  * @param {Function} props.onNext - Function to move to next screen
@@ -24,31 +24,31 @@ const ToneSelection = ({ userData, onNext }) => {
   const optionsAnim = fadeInUp(300);
   const buttonAnim = fadeInUp(500);
   
-  // Tone options
+  // Communication style options
   const toneOptions = [
     {
-      id: 'poetic',
-      title: 'Poetic',
-      description: 'Using metaphors and rich imagery to convey ideas',
-      icon: 'book',
+      id: 'analytical',
+      title: 'Analytical',
+      description: 'Data-driven insights with precision and clarity',
+      icon: 'analytics',
     },
     {
-      id: 'honest',
-      title: 'Honest',
-      description: 'Direct and straightforward, even when the truth is tough',
-      icon: 'hand-right',
+      id: 'direct',
+      title: 'Direct',
+      description: 'Straightforward communication with actionable feedback',
+      icon: 'arrow-forward-circle',
     },
     {
-      id: 'soft',
-      title: 'Soft',
-      description: 'Gentle and encouraging, with an empathetic approach',
-      icon: 'heart',
+      id: 'balanced',
+      title: 'Balanced',
+      description: 'Thoughtful analysis with contextual perspective',
+      icon: 'infinite',
     },
     {
-      id: 'neutral',
-      title: 'Neutral',
-      description: 'Balanced and objective, focusing on the facts',
-      icon: 'sparkles',
+      id: 'nuanced',
+      title: 'Nuanced',
+      description: 'Sophisticated interpretation with layered meaning',
+      icon: 'prism',
     },
   ];
   
@@ -65,11 +65,11 @@ const ToneSelection = ({ userData, onNext }) => {
   return (
     <View style={styles.container}>
       <Animated.Text style={[styles.title, titleAnim]}>
-        Choose a tone
+        Communication Style
       </Animated.Text>
       
       <Animated.Text style={[styles.subtitle, subtitleAnim]}>
-        How would you like Voa to communicate with you?
+        Select how Voa will analyze and present your data
       </Animated.Text>
       
       <Animated.View style={optionsAnim}>
@@ -111,13 +111,16 @@ const styles = StyleSheet.create({
     ...theme.typography.styles.h2,
     color: theme.colors.text.primary,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: theme.typography.letterSpacing.wide,
+    textTransform: 'uppercase',
   },
   subtitle: {
     ...theme.typography.styles.bodyRegular,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
+    letterSpacing: theme.typography.letterSpacing.normal,
   },
   optionsContainer: {
     width: '100%',
