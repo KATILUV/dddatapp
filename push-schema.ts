@@ -1,7 +1,7 @@
-import { Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { migrate } from 'drizzle-orm/neon-serverless/migrator';
-import * as schema from './shared/schema';
+const { Pool } = require('@neondatabase/serverless');
+const { drizzle } = require('drizzle-orm/neon-serverless');
+const ws = require('ws');
+const schema = require('./shared/schema');
 
 async function pushSchema() {
   if (!process.env.DATABASE_URL) {
@@ -61,8 +61,14 @@ async function pushSchema() {
         source_type VARCHAR NOT NULL,
         status VARCHAR DEFAULT 'disconnected',
         last_synced TIMESTAMP,
+        next_sync_due TIMESTAMP,
+        sync_frequency VARCHAR DEFAULT 'daily',
+        sync_enabled BOOLEAN DEFAULT TRUE,
         data_size INTEGER,
+        data_freshness INTEGER,
         config JSONB,
+        permission_scope JSONB,
+        error_message TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

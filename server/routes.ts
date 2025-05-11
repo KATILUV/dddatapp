@@ -86,12 +86,100 @@ async function registerRoutes(app) {
 
   app.delete('/api/data-sources/:id', isAuthenticated, async (req: any, res: Response) => {
     try {
+      const userId = req.user.claims.sub;
       const sourceId = parseInt(req.params.id);
+      
+      // Verify ownership
+      const source = await storage.getDataSourceById(sourceId);
+      if (!source || source.userId !== userId) {
+        return res.status(404).json({ message: "Data source not found" });
+      }
+      
       await storage.removeDataSource(sourceId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error removing data source:", error);
       res.status(500).json({ message: "Failed to remove data source" });
+    }
+  });
+  
+  // Get data source by ID
+  app.get('/api/data-sources/:id', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const sourceId = parseInt(req.params.id);
+      
+      // Get the data source
+      const source = await storage.getDataSourceById(sourceId);
+      
+      // Verify ownership
+      if (!source || source.userId !== userId) {
+        return res.status(404).json({ message: "Data source not found" });
+      }
+      
+      res.json(source);
+    } catch (error) {
+      console.error("Error fetching data source:", error);
+      res.status(500).json({ message: "Failed to fetch data source" });
+    }
+  });
+  
+  // Refresh a data source (trigger a sync)
+  app.post('/api/data-sources/:id/refresh', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const sourceId = parseInt(req.params.id);
+      
+      // Verify ownership
+      const source = await storage.getDataSourceById(sourceId);
+      if (!source || source.userId !== userId) {
+        return res.status(404).json({ message: "Data source not found" });
+      }
+      
+      const refreshedSource = await storage.refreshDataSource(sourceId);
+      res.json(refreshedSource);
+    } catch (error) {
+      console.error("Error refreshing data source:", error);
+      res.status(500).json({ message: "Failed to refresh data source" });
+    }
+  });
+  
+  // Schedule data source sync
+  app.post('/api/data-sources/:id/schedule', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const sourceId = parseInt(req.params.id);
+      const { frequency } = req.body;
+      
+      if (!frequency || !['hourly', 'daily', 'weekly', 'monthly'].includes(frequency)) {
+        return res.status(400).json({ message: "Invalid frequency. Must be one of: hourly, daily, weekly, monthly" });
+      }
+      
+      // Verify ownership
+      const source = await storage.getDataSourceById(sourceId);
+      if (!source || source.userId !== userId) {
+        return res.status(404).json({ message: "Data source not found" });
+      }
+      
+      const updatedSource = await storage.scheduleDataSourceSync(sourceId, frequency);
+      res.json(updatedSource);
+    } catch (error) {
+      console.error("Error scheduling data source sync:", error);
+      res.status(500).json({ message: "Failed to schedule data source sync" });
+    }
+  });
+  
+  // Get data sources by type
+  app.get('/api/data-sources/type/:type', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const sourceType = req.params.type;
+      
+      const sources = await storage.getDataSourcesByType(userId, sourceType);
+      res.json(sources);
+    } catch (error) {
+      console.error("Error fetching data sources by type:", error);
+      res.status(500).json({ message: "Failed to fetch data sources" });
     }
   });
 
