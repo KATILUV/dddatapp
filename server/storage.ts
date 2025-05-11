@@ -30,9 +30,13 @@ export interface IStorage {
   
   // Data sources
   getUserDataSources(userId: string): Promise<DataSource[]>;
+  getDataSourceById(id: number): Promise<DataSource | undefined>;
+  getDataSourcesByType(userId: string, sourceType: string): Promise<DataSource[]>;
   addDataSource(source: InsertDataSource): Promise<DataSource>;
   updateDataSource(id: number, source: Partial<InsertDataSource>): Promise<DataSource>;
   removeDataSource(id: number): Promise<void>;
+  refreshDataSource(id: number): Promise<DataSource>;
+  scheduleDataSourceSync(id: number, frequency: string): Promise<DataSource>;
   
   // OAuth tokens
   getOAuthToken(dataSourceId: number): Promise<OAuthToken | undefined>;
@@ -111,7 +115,43 @@ export class DatabaseStorage implements IStorage {
       .where(eq(dataSources.userId, userId));
   }
 
+  async getDataSourceById(id: number): Promise<DataSource | undefined> {
+    const [source] = await db
+      .select()
+      .from(dataSources)
+      .where(eq(dataSources.id, id));
+    return source;
+  }
+
+  async getDataSourcesByType(userId: string, sourceType: string): Promise<DataSource[]> {
+    return await db
+      .select()
+      .from(dataSources)
+      .where(eq(dataSources.userId, userId))
+      .where(eq(dataSources.sourceType, sourceType));
+  }
+
   async addDataSource(source: InsertDataSource): Promise<DataSource> {
+    // Set next sync time based on frequency if not provided
+    if (!source.nextSyncDue && source.syncFrequency) {
+      const now = new Date();
+      switch (source.syncFrequency) {
+        case 'hourly':
+          now.setHours(now.getHours() + 1);
+          break;
+        case 'daily':
+          now.setDate(now.getDate() + 1);
+          break;
+        case 'weekly':
+          now.setDate(now.getDate() + 7);
+          break;
+        case 'monthly':
+          now.setMonth(now.getMonth() + 1);
+          break;
+      }
+      source.nextSyncDue = now;
+    }
+
     const [newSource] = await db
       .insert(dataSources)
       .values(source)
@@ -135,6 +175,90 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(dataSources)
       .where(eq(dataSources.id, id));
+  }
+
+  async refreshDataSource(id: number): Promise<DataSource> {
+    // This would trigger a data refresh for the source
+    // In practice, it would call the appropriate API client based on sourceType
+    const now = new Date();
+    const [source] = await db
+      .select()
+      .from(dataSources)
+      .where(eq(dataSources.id, id));
+    
+    if (!source) {
+      throw new Error(`Data source with id ${id} not found`);
+    }
+
+    // Update the lastSynced timestamp and calculate next sync time
+    let nextSyncDue: Date;
+    switch (source.syncFrequency) {
+      case 'hourly':
+        nextSyncDue = new Date(now.getTime() + 60 * 60 * 1000);
+        break;
+      case 'daily':
+        nextSyncDue = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        break;
+      case 'weekly':
+        nextSyncDue = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'monthly':
+        nextSyncDue = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        nextSyncDue = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Default to daily
+    }
+
+    const [updatedSource] = await db
+      .update(dataSources)
+      .set({
+        lastSynced: now,
+        nextSyncDue,
+        dataFreshness: 100, // Reset freshness to 100% after sync
+        status: 'connected',
+        errorMessage: null,
+        updatedAt: now,
+      })
+      .where(eq(dataSources.id, id))
+      .returning();
+    
+    return updatedSource;
+  }
+
+  async scheduleDataSourceSync(id: number, frequency: string): Promise<DataSource> {
+    const now = new Date();
+    let nextSyncDue: Date;
+    
+    // Calculate next sync time based on frequency
+    switch (frequency) {
+      case 'hourly':
+        nextSyncDue = new Date(now.getTime() + 60 * 60 * 1000);
+        break;
+      case 'daily':
+        nextSyncDue = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        break;
+      case 'weekly':
+        nextSyncDue = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'monthly':
+        nextSyncDue = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        nextSyncDue = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Default to daily
+    }
+
+    const [updatedSource] = await db
+      .update(dataSources)
+      .set({
+        syncFrequency: frequency,
+        nextSyncDue,
+        syncEnabled: true,
+        updatedAt: now,
+      })
+      .where(eq(dataSources.id, id))
+      .returning();
+    
+    return updatedSource;
   }
 
   // OAuth tokens

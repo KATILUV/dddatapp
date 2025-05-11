@@ -54,8 +54,14 @@ export const dataSources = pgTable("data_sources", {
   sourceType: varchar("source_type").notNull(), // google, twitter, spotify, etc.
   status: varchar("status").default("disconnected"), // connected, disconnected, error
   lastSynced: timestamp("last_synced"),
+  nextSyncDue: timestamp("next_sync_due"),
+  syncFrequency: varchar("sync_frequency").default("daily"), // hourly, daily, weekly, monthly
+  syncEnabled: boolean("sync_enabled").default(true),
   dataSize: integer("data_size"), // in bytes
+  dataFreshness: integer("data_freshness"), // 0-100 scale indicating how fresh the data is
   config: jsonb("config"), // source-specific configuration
+  permissionScope: jsonb("permission_scope"), // scopes/permissions granted for this source
+  errorMessage: text("error_message"), // last error if status is 'error'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
