@@ -1,329 +1,293 @@
 /**
- * Network manager service for handling online/offline status and connectivity changes
+ * Network Manager
+ * Handles network connectivity detection and synchronization
  */
 import NetInfo from '@react-native-community/netinfo';
-import { Platform } from 'react-native';
-import { 
-  getPendingOfflineActions, 
-  removeFromSyncQueue,
-  isCacheStale,
-  updateLastSyncTimestamp
-} from './offlineStorage';
-import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Subscribers to network state changes
-const subscribers = [];
-
-// Current network state
-let isConnected = true;
-let connectionType = 'unknown';
-let isConnectionExpensive = false;
+// Keys for storing offline data
+const PENDING_ACTIONS_KEY = 'solstice_pending_actions';
+const LAST_SYNC_KEY = 'solstice_last_sync';
 
 /**
- * Initialize the network manager
+ * Initialize network monitoring
+ * @param {Function} onNetworkChange - Callback for network status changes
+ * @returns {Function} - Function to unsubscribe from network events
  */
-export function initNetworkManager() {
-  // Subscribe to network info updates
+export function initNetworkMonitoring(onNetworkChange) {
+  // Subscribe to network changes
   const unsubscribe = NetInfo.addEventListener(state => {
-    const wasConnected = isConnected;
-    isConnected = state.isConnected;
-    connectionType = state.type;
-    isConnectionExpensive = state.details?.isConnectionExpensive || false;
-    
-    // Notify subscribers of change
-    if (wasConnected !== isConnected) {
-      notifySubscribers(isConnected);
-      
-      // Try to sync when connection is restored
-      if (isConnected && !wasConnected) {
-        syncOfflineActions();
-      }
-    }
+    onNetworkChange(state.isConnected);
   });
-  
-  // Initial network check
-  checkNetworkStatus();
   
   return unsubscribe;
 }
 
 /**
  * Check current network status
- * @returns {Promise<Object>} Current network state
+ * @returns {Promise<boolean>} - Whether device is connected
  */
 export async function checkNetworkStatus() {
+  const netInfo = await NetInfo.fetch();
+  return netInfo.isConnected;
+}
+
+/**
+ * Add action to pending queue
+ * @param {Object} action - The action to queue
+ * @returns {Promise<number>} - Number of pending actions
+ */
+export async function queueOfflineAction(action) {
   try {
-    const state = await NetInfo.fetch();
-    isConnected = state.isConnected;
-    connectionType = state.type;
-    isConnectionExpensive = state.details?.isConnectionExpensive || false;
-    return { isConnected, connectionType, isConnectionExpensive };
+    // Get existing pending actions
+    const actionsString = await AsyncStorage.getItem(PENDING_ACTIONS_KEY);
+    const actions = actionsString ? JSON.parse(actionsString) : [];
+    
+    // Add new action with timestamp
+    const actionWithTimestamp = {
+      ...action,
+      timestamp: Date.now(),
+      id: Date.now() + Math.random().toString(36).substring(2, 9)
+    };
+    
+    actions.push(actionWithTimestamp);
+    
+    // Save updated queue
+    await AsyncStorage.setItem(PENDING_ACTIONS_KEY, JSON.stringify(actions));
+    
+    return actions.length;
   } catch (error) {
-    console.error('Failed to check network status:', error);
-    return { isConnected: false, connectionType: 'unknown', isConnectionExpensive: false };
+    console.error('Failed to queue offline action:', error);
+    return 0;
   }
 }
 
 /**
- * Subscribe to network state changes
- * @param {Function} callback Function to call on network state change
- * @returns {Function} Unsubscribe function
+ * Get number of pending actions
+ * @returns {Promise<number>} - Number of pending actions
  */
-export function subscribeToNetworkChanges(callback) {
-  subscribers.push(callback);
-  
-  // Call immediately with current state
-  callback(isConnected);
-  
-  // Return unsubscribe function
-  return () => {
-    const index = subscribers.indexOf(callback);
-    if (index !== -1) {
-      subscribers.splice(index, 1);
-    }
-  };
+export async function getPendingActionsCount() {
+  try {
+    const actionsString = await AsyncStorage.getItem(PENDING_ACTIONS_KEY);
+    if (!actionsString) return 0;
+    
+    const actions = JSON.parse(actionsString);
+    return actions.length;
+  } catch (error) {
+    console.error('Failed to get pending actions count:', error);
+    return 0;
+  }
 }
 
 /**
- * Notify all subscribers of network state change
- * @param {boolean} connected Current connection state
+ * Get all pending actions
+ * @returns {Promise<Array>} - Array of pending actions
  */
-function notifySubscribers(connected) {
-  subscribers.forEach(callback => {
-    try {
-      callback(connected);
-    } catch (error) {
-      console.error('Error in network change subscriber:', error);
-    }
-  });
+export async function getPendingActions() {
+  try {
+    const actionsString = await AsyncStorage.getItem(PENDING_ACTIONS_KEY);
+    if (!actionsString) return [];
+    
+    return JSON.parse(actionsString);
+  } catch (error) {
+    console.error('Failed to get pending actions:', error);
+    return [];
+  }
 }
 
 /**
- * Attempt to sync pending offline actions
- * @returns {Promise<{success: boolean, synced: number, failed: number}>}
+ * Process a specific pending action
+ * @param {Object} action - The action to process
+ * @returns {Promise<boolean>} - Whether action was processed successfully
+ */
+async function processAction(action) {
+  try {
+    // Process based on action type
+    switch (action.type) {
+      case 'UPDATE_USER_PREFERENCES':
+        // Call API to update user preferences
+        await fetch('/api/preferences', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(action.data),
+        });
+        break;
+        
+      case 'ADD_DATA_SOURCE':
+        // Call API to add data source
+        await fetch('/api/data-sources', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(action.data),
+        });
+        break;
+        
+      case 'UPDATE_DATA_SOURCE':
+        // Call API to update data source
+        await fetch(`/api/data-sources/${action.data.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(action.data),
+        });
+        break;
+        
+      case 'DELETE_DATA_SOURCE':
+        // Call API to delete data source
+        await fetch(`/api/data-sources/${action.data.id}`, {
+          method: 'DELETE',
+        });
+        break;
+        
+      case 'STAR_INSIGHT':
+        // Call API to star/unstar insight
+        await fetch(`/api/insights/${action.data.id}/star`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ starred: action.data.starred }),
+        });
+        break;
+        
+      case 'ARCHIVE_INSIGHT':
+        // Call API to archive/unarchive insight
+        await fetch(`/api/insights/${action.data.id}/archive`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ archived: action.data.archived }),
+        });
+        break;
+        
+      case 'EXPORT_INSIGHT':
+        // Call API to track insight export
+        await fetch(`/api/insights/${action.data.id}/export`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ destination: action.data.destination }),
+        });
+        break;
+        
+      default:
+        console.warn('Unknown action type:', action.type);
+        return true; // Skip unknown actions
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to process action:', error);
+    return false;
+  }
+}
+
+/**
+ * Synchronize all pending offline actions
+ * @returns {Promise<Object>} - Sync results
  */
 export async function syncOfflineActions() {
-  // Skip if not connected
-  if (!isConnected) {
-    return { success: false, synced: 0, failed: 0 };
-  }
-  
   try {
-    const pendingActions = await getPendingOfflineActions();
-    if (pendingActions.length === 0) {
-      return { success: true, synced: 0, failed: 0 };
+    // Check network status
+    const isConnected = await checkNetworkStatus();
+    if (!isConnected) {
+      return {
+        success: false,
+        synced: 0,
+        failed: 0,
+        message: 'No network connection'
+      };
     }
     
+    // Get pending actions
+    const actions = await getPendingActions();
+    if (actions.length === 0) {
+      // Update last sync time even if no actions
+      await AsyncStorage.setItem(LAST_SYNC_KEY, Date.now().toString());
+      
+      return {
+        success: true,
+        synced: 0,
+        failed: 0,
+        message: 'No pending actions'
+      };
+    }
+    
+    // Process each action
     let synced = 0;
     let failed = 0;
+    const remainingActions = [];
     
-    // Process each pending action
-    for (const action of pendingActions) {
-      try {
-        let success = false;
-        
-        // Handle different resource types and actions
-        switch (action.resourceType) {
-          case 'insight':
-            success = await syncInsightAction(action);
-            break;
-          case 'dataSource':
-            success = await syncDataSourceAction(action);
-            break;
-          case 'preference':
-            success = await syncPreferenceAction(action);
-            break;
-          default:
-            console.warn(`Unknown resource type: ${action.resourceType}`);
-            success = false;
-        }
-        
-        // Remove from queue if successful
-        if (success) {
-          await removeFromSyncQueue(action.id);
-          synced++;
-        } else {
-          failed++;
-        }
-      } catch (error) {
-        console.error('Error syncing action:', error, action);
+    for (const action of actions) {
+      const success = await processAction(action);
+      
+      if (success) {
+        synced++;
+      } else {
         failed++;
+        remainingActions.push(action);
       }
     }
     
-    // Show notification if actions were synced
-    if (synced > 0 && Platform.OS !== 'web') {
-      Alert.alert(
-        'Sync Complete',
-        `${synced} changes synchronized with the server.`,
-        [{ text: 'OK' }]
-      );
-    }
+    // Update pending actions with remaining ones
+    await AsyncStorage.setItem(
+      PENDING_ACTIONS_KEY, 
+      JSON.stringify(remainingActions)
+    );
     
-    // Update sync timestamp
-    await updateLastSyncTimestamp();
+    // Update last sync time
+    await AsyncStorage.setItem(LAST_SYNC_KEY, Date.now().toString());
     
-    return { success: true, synced, failed };
+    return {
+      success: true,
+      synced,
+      failed,
+      remaining: remainingActions.length,
+      message: `Synced ${synced} actions, ${failed} failed`
+    };
   } catch (error) {
     console.error('Failed to sync offline actions:', error);
-    return { success: false, synced: 0, failed: 0 };
+    
+    return {
+      success: false,
+      synced: 0,
+      failed: 0,
+      message: error.message
+    };
   }
 }
 
 /**
- * Sync insight-related action
- * @param {Object} action Action to sync
- * @returns {Promise<boolean>} Success status
+ * Get the timestamp of the last sync
+ * @returns {Promise<number|null>} - Timestamp of last sync or null
  */
-async function syncInsightAction(action) {
-  const { action: actionType, data } = action;
-  
+export async function getLastSyncTime() {
   try {
-    let response;
-    
-    switch (actionType) {
-      case 'add':
-        response = await fetch('/api/insights', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        break;
-      case 'update':
-        response = await fetch(`/api/insights/${data.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        break;
-      case 'delete':
-        response = await fetch(`/api/insights/${data.id}`, {
-          method: 'DELETE'
-        });
-        break;
-      case 'star':
-        response = await fetch(`/api/insights/${data.id}/star`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ starred: data.starred })
-        });
-        break;
-      case 'archive':
-        response = await fetch(`/api/insights/${data.id}/archive`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ archived: data.archived })
-        });
-        break;
-      default:
-        console.warn(`Unknown action type for insight: ${actionType}`);
-        return false;
-    }
-    
-    return response && response.ok;
+    const timestamp = await AsyncStorage.getItem(LAST_SYNC_KEY);
+    return timestamp ? parseInt(timestamp, 10) : null;
   } catch (error) {
-    console.error('Failed to sync insight action:', error);
+    console.error('Failed to get last sync time:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear all pending actions
+ * @returns {Promise<boolean>} - Whether clearing was successful
+ */
+export async function clearPendingActions() {
+  try {
+    await AsyncStorage.removeItem(PENDING_ACTIONS_KEY);
+    return true;
+  } catch (error) {
+    console.error('Failed to clear pending actions:', error);
     return false;
   }
-}
-
-/**
- * Sync data source-related action
- * @param {Object} action Action to sync
- * @returns {Promise<boolean>} Success status
- */
-async function syncDataSourceAction(action) {
-  const { action: actionType, data } = action;
-  
-  try {
-    let response;
-    
-    switch (actionType) {
-      case 'add':
-        response = await fetch('/api/data-sources', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        break;
-      case 'update':
-        response = await fetch(`/api/data-sources/${data.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        break;
-      case 'delete':
-        response = await fetch(`/api/data-sources/${data.id}`, {
-          method: 'DELETE'
-        });
-        break;
-      case 'refresh':
-        response = await fetch(`/api/data-sources/${data.id}/refresh`, {
-          method: 'POST'
-        });
-        break;
-      case 'schedule':
-        response = await fetch(`/api/data-sources/${data.id}/schedule`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frequency: data.frequency })
-        });
-        break;
-      default:
-        console.warn(`Unknown action type for data source: ${actionType}`);
-        return false;
-    }
-    
-    return response && response.ok;
-  } catch (error) {
-    console.error('Failed to sync data source action:', error);
-    return false;
-  }
-}
-
-/**
- * Sync preference-related action
- * @param {Object} action Action to sync
- * @returns {Promise<boolean>} Success status
- */
-async function syncPreferenceAction(action) {
-  const { data } = action;
-  
-  try {
-    const response = await fetch('/api/preferences', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    
-    return response && response.ok;
-  } catch (error) {
-    console.error('Failed to sync preference action:', error);
-    return false;
-  }
-}
-
-/**
- * Check if the app has fresh data or needs to refresh
- * @returns {Promise<boolean>} True if data needs refresh
- */
-export async function needsDataRefresh() {
-  if (!isConnected) {
-    return false; // Can't refresh if offline
-  }
-  
-  return await isCacheStale();
-}
-
-/**
- * Get current connection details
- * @returns {Object} Connection details object
- */
-export function getConnectionInfo() {
-  return {
-    isConnected,
-    connectionType,
-    isConnectionExpensive
-  };
 }

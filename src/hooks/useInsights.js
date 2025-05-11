@@ -1,301 +1,364 @@
 /**
- * Custom hook for managing insights with offline support
+ * Custom hook for accessing and managing insights
+ * Handles offline-first logic and synchronization
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { useOffline } from '../contexts/OfflineContext';
 
-const useInsights = () => {
+/**
+ * Hook for fetching and managing insights
+ * @param {Object} options - Configuration options
+ * @param {string} options.category - Filter by category
+ * @param {string} options.type - Filter by type
+ * @param {boolean} options.starredOnly - Get only starred insights
+ * @param {boolean} options.includeArchived - Include archived insights
+ * @returns {Object} - Insights and management functions
+ */
+export default function useInsights({ 
+  category = null, 
+  type = null, 
+  starredOnly = false,
+  includeArchived = false
+} = {}) {
   // State
   const [insights, setInsights] = useState([]);
-  const [filteredInsights, setFilteredInsights] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    type: null,
-    category: null,
-    starred: false,
-    searchQuery: '',
-    sort: 'newest'
-  });
+  const [error, setError] = useState(null);
+  const [lastFetched, setLastFetched] = useState(null);
   
-  // Offline context
+  // Get offline context
   const { 
-    fetchWithOfflineSupport, 
-    performOfflineAction,
-    isOnline
+    isOnline, 
+    saveInsights, 
+    getInsights, 
+    queueOfflineAction, 
+    syncNow 
   } = useOffline();
   
-  // Fetch insights with offline support
+  /**
+   * Fetch insights from API or local storage
+   */
   const fetchInsights = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     
     try {
-      const result = await fetchWithOfflineSupport('/api/insights', {}, 'insights');
+      let fetchedInsights = [];
       
-      if (result && result.data) {
-        setInsights(result.data);
+      if (isOnline) {
+        // Fetch from API based on filters
+        let endpoint = '/api/insights';
+        
+        if (category) {
+          endpoint = `/api/insights/category/${category}`;
+        } else if (type) {
+          endpoint = `/api/insights/type/${type}`;
+        } else if (starredOnly) {
+          endpoint = '/api/insights/starred';
+        }
+        
+        const response = await fetch(endpoint);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        fetchedInsights = await response.json();
+        
+        // Update local storage
+        await saveInsights(fetchedInsights);
+      } else {
+        // Fetch from local storage
+        const storedInsights = await getInsights();
+        
+        if (!storedInsights) {
+          throw new Error('No insights available offline');
+        }
+        
+        // Apply filters client-side
+        fetchedInsights = storedInsights.filter(insight => {
+          // Apply category filter
+          if (category && insight.category !== category) {
+            return false;
+          }
+          
+          // Apply type filter
+          if (type && insight.type !== type) {
+            return false;
+          }
+          
+          // Apply starred filter
+          if (starredOnly && !insight.starred) {
+            return false;
+          }
+          
+          // Apply archived filter
+          if (!includeArchived && insight.archived) {
+            return false;
+          }
+          
+          return true;
+        });
       }
+      
+      setInsights(fetchedInsights);
+      setLastFetched(new Date());
     } catch (error) {
-      console.error('Failed to fetch insights:', error);
-      Alert.alert(
-        'Error',
-        'Failed to load insights. Please try again later.',
-        [{ text: 'OK' }]
-      );
+      console.error('Error fetching insights:', error);
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchWithOfflineSupport]);
+  }, [category, type, starredOnly, includeArchived, isOnline]);
   
-  // Initial fetch
+  // Fetch insights on mount and when filters change
   useEffect(() => {
     fetchInsights();
   }, [fetchInsights]);
   
-  // Apply filters and sorting when insights or filters change
-  useEffect(() => {
-    let filtered = [...insights];
-    
-    // Apply type filter
-    if (filters.type) {
-      filtered = filtered.filter(insight => insight.type === filters.type);
-    }
-    
-    // Apply category filter
-    if (filters.category) {
-      filtered = filtered.filter(insight => insight.category === filters.category);
-    }
-    
-    // Apply starred filter
-    if (filters.starred) {
-      filtered = filtered.filter(insight => insight.isStarred);
-    }
-    
-    // Apply search filter
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(insight =>
-        insight.title.toLowerCase().includes(query) ||
-        insight.summary.toLowerCase().includes(query)
-      );
-    }
-    
-    // Apply sorting
-    switch (filters.sort) {
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
-      case 'oldest':
-        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        break;
-      case 'relevance':
-        filtered.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
-        break;
-      case 'confidence':
-        filtered.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-        break;
-      default:
-        // Default to newest
-        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    }
-    
-    setFilteredInsights(filtered);
-  }, [insights, filters]);
-  
-  // Update filters
-  const updateFilters = useCallback((newFilters) => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      ...newFilters
-    }));
-  }, []);
-  
-  // Reset filters
-  const resetFilters = useCallback(() => {
-    setFilters({
-      type: null,
-      category: null,
-      starred: false,
-      searchQuery: '',
-      sort: 'newest'
-    });
-  }, []);
-  
-  // Get categories and types from insights
-  const getMetadata = useCallback(() => {
-    const categories = new Set();
-    const types = new Set();
-    
-    insights.forEach(insight => {
-      if (insight.category) categories.add(insight.category);
-      if (insight.type) types.add(insight.type);
-    });
-    
-    return {
-      categories: [...categories],
-      types: [...types]
-    };
-  }, [insights]);
-  
-  // Star/unstar an insight
-  const starInsight = useCallback(async (insightId, starred) => {
+  /**
+   * Star/unstar an insight
+   * @param {number} id - Insight ID
+   * @param {boolean} starred - Star status
+   */
+  const starInsight = useCallback(async (id, starred) => {
     try {
-      // Optimistic update
-      setInsights(prev => prev.map(insight => 
-        insight.id === insightId 
-          ? { ...insight, isStarred: starred } 
-          : insight
-      ));
-      
-      // Perform the action with offline support
-      const result = await performOfflineAction(
-        'star',
-        'insight',
-        { id: insightId, starred }
+      // Optimistically update UI
+      setInsights(prevInsights => 
+        prevInsights.map(insight => 
+          insight.id === id 
+            ? { ...insight, starred } 
+            : insight
+        )
       );
       
-      if (!result.success) {
-        // Revert optimistic update if failed
-        setInsights(prev => prev.map(insight => 
-          insight.id === insightId 
-            ? { ...insight, isStarred: !starred } 
-            : insight
-        ));
+      if (isOnline) {
+        // Send to API
+        const response = await fetch(`/api/insights/${id}/star`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ starred }),
+        });
         
-        Alert.alert(
-          'Error',
-          'Failed to update insight. Please try again later.',
-          [{ text: 'OK' }]
-        );
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        // Update local storage
+        const storedInsights = await getInsights();
+        if (storedInsights) {
+          await saveInsights(
+            storedInsights.map(insight => 
+              insight.id === id 
+                ? { ...insight, starred } 
+                : insight
+            )
+          );
+        }
+      } else {
+        // Queue offline action
+        await queueOfflineAction({
+          type: 'STAR_INSIGHT',
+          data: { id, starred },
+        });
+        
+        // Update local storage
+        const storedInsights = await getInsights();
+        if (storedInsights) {
+          await saveInsights(
+            storedInsights.map(insight => 
+              insight.id === id 
+                ? { ...insight, starred } 
+                : insight
+            )
+          );
+        }
       }
-      
-      return result.success;
     } catch (error) {
-      console.error('Failed to star insight:', error);
+      console.error('Error starring insight:', error);
       
       // Revert optimistic update
-      setInsights(prev => prev.map(insight => 
-        insight.id === insightId 
-          ? { ...insight, isStarred: !starred } 
-          : insight
-      ));
-      
-      Alert.alert(
-        'Error',
-        'Failed to update insight. Please try again later.',
-        [{ text: 'OK' }]
-      );
-      
-      return false;
-    }
-  }, [performOfflineAction]);
-  
-  // Archive/unarchive an insight
-  const archiveInsight = useCallback(async (insightId, archived) => {
-    try {
-      // Optimistic update
-      setInsights(prev => prev.map(insight => 
-        insight.id === insightId 
-          ? { ...insight, isArchived: archived } 
-          : insight
-      ));
-      
-      // Perform the action with offline support
-      const result = await performOfflineAction(
-        'archive',
-        'insight',
-        { id: insightId, archived }
-      );
-      
-      if (!result.success) {
-        // Revert optimistic update if failed
-        setInsights(prev => prev.map(insight => 
-          insight.id === insightId 
-            ? { ...insight, isArchived: !archived } 
+      setInsights(prevInsights => 
+        prevInsights.map(insight => 
+          insight.id === id 
+            ? { ...insight, starred: !starred } 
             : insight
-        ));
-        
-        Alert.alert(
-          'Error',
-          'Failed to update insight. Please try again later.',
-          [{ text: 'OK' }]
-        );
-      }
+        )
+      );
       
-      return result.success;
+      setError(error.message);
+    }
+  }, [isOnline]);
+  
+  /**
+   * Archive/unarchive an insight
+   * @param {number} id - Insight ID
+   * @param {boolean} archived - Archive status
+   */
+  const archiveInsight = useCallback(async (id, archived) => {
+    try {
+      // Optimistically update UI
+      setInsights(prevInsights => 
+        prevInsights.map(insight => 
+          insight.id === id 
+            ? { ...insight, archived } 
+            : insight
+        )
+      );
+      
+      if (isOnline) {
+        // Send to API
+        const response = await fetch(`/api/insights/${id}/archive`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ archived }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        // Update local storage
+        const storedInsights = await getInsights();
+        if (storedInsights) {
+          await saveInsights(
+            storedInsights.map(insight => 
+              insight.id === id 
+                ? { ...insight, archived } 
+                : insight
+            )
+          );
+        }
+      } else {
+        // Queue offline action
+        await queueOfflineAction({
+          type: 'ARCHIVE_INSIGHT',
+          data: { id, archived },
+        });
+        
+        // Update local storage
+        const storedInsights = await getInsights();
+        if (storedInsights) {
+          await saveInsights(
+            storedInsights.map(insight => 
+              insight.id === id 
+                ? { ...insight, archived } 
+                : insight
+            )
+          );
+        }
+      }
     } catch (error) {
-      console.error('Failed to archive insight:', error);
+      console.error('Error archiving insight:', error);
       
       // Revert optimistic update
-      setInsights(prev => prev.map(insight => 
-        insight.id === insightId 
-          ? { ...insight, isArchived: !archived } 
-          : insight
-      ));
-      
-      Alert.alert(
-        'Error',
-        'Failed to update insight. Please try again later.',
-        [{ text: 'OK' }]
+      setInsights(prevInsights => 
+        prevInsights.map(insight => 
+          insight.id === id 
+            ? { ...insight, archived: !archived } 
+            : insight
+        )
       );
       
+      setError(error.message);
+    }
+  }, [isOnline]);
+  
+  /**
+   * Track insight export
+   * @param {number} id - Insight ID
+   * @param {string} destination - Export destination
+   */
+  const exportInsight = useCallback(async (id, destination) => {
+    try {
+      if (isOnline) {
+        // Send to API
+        const response = await fetch(`/api/insights/${id}/export`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ destination }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+      } else {
+        // Queue offline action
+        await queueOfflineAction({
+          type: 'EXPORT_INSIGHT',
+          data: { id, destination },
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error exporting insight:', error);
+      setError(error.message);
       return false;
     }
-  }, [performOfflineAction]);
+  }, [isOnline]);
   
-  // Export an insight
-  const exportInsight = useCallback(async (insightId, destination) => {
+  /**
+   * Get a specific insight by ID
+   * @param {number} id - Insight ID
+   * @returns {Promise<Object|null>} - Insight or null if not found
+   */
+  const getInsightById = useCallback(async (id) => {
+    try {
+      if (isOnline) {
+        // Fetch from API
+        const response = await fetch(`/api/insights/${id}`);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        return await response.json();
+      } else {
+        // Check if insight is already in state
+        const foundInsight = insights.find(insight => insight.id === id);
+        if (foundInsight) return foundInsight;
+        
+        // Fetch from local storage
+        const storedInsights = await getInsights();
+        if (!storedInsights) return null;
+        
+        return storedInsights.find(insight => insight.id === id) || null;
+      }
+    } catch (error) {
+      console.error('Error getting insight by ID:', error);
+      setError(error.message);
+      return null;
+    }
+  }, [isOnline, insights]);
+  
+  /**
+   * Force refresh insights
+   */
+  const refreshInsights = useCallback(async () => {
+    // If we're offline, try to sync first
     if (!isOnline) {
-      Alert.alert(
-        'Offline',
-        'Exporting insights requires an internet connection.',
-        [{ text: 'OK' }]
-      );
-      return false;
+      await syncNow();
     }
     
-    try {
-      const result = await performOfflineAction(
-        'export',
-        'insight',
-        { id: insightId, destination }
-      );
-      
-      if (!result.success) {
-        Alert.alert(
-          'Error',
-          'Failed to export insight. Please try again later.',
-          [{ text: 'OK' }]
-        );
-      }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Failed to export insight:', error);
-      
-      Alert.alert(
-        'Error',
-        'Failed to export insight. Please try again later.',
-        [{ text: 'OK' }]
-      );
-      
-      return false;
-    }
-  }, [performOfflineAction, isOnline]);
+    await fetchInsights();
+  }, [isOnline, fetchInsights, syncNow]);
   
   return {
-    insights: filteredInsights,
-    allInsights: insights,
+    insights,
     isLoading,
-    filters,
-    updateFilters,
-    resetFilters,
-    refreshInsights: fetchInsights,
-    getMetadata,
+    error,
+    lastFetched,
+    refreshInsights,
     starInsight,
     archiveInsight,
-    exportInsight
+    exportInsight,
+    getInsightById,
   };
-};
-
-export default useInsights;
+}

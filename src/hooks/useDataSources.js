@@ -1,375 +1,481 @@
 /**
- * Custom hook for managing data sources with offline support
+ * Custom hook for accessing and managing data sources
+ * Handles offline-first logic and synchronization
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { useOffline } from '../contexts/OfflineContext';
 
-const useDataSources = () => {
+/**
+ * Hook for fetching and managing data sources
+ * @param {Object} options - Configuration options
+ * @param {string} options.type - Filter by source type
+ * @returns {Object} - Data sources and management functions
+ */
+export default function useDataSources({ 
+  type = null
+} = {}) {
   // State
   const [dataSources, setDataSources] = useState([]);
-  const [filteredSources, setFilteredSources] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    type: null,
-    status: null,
-    searchQuery: '',
-  });
+  const [error, setError] = useState(null);
+  const [lastFetched, setLastFetched] = useState(null);
   
-  // Offline context
+  // Get offline context
   const { 
-    fetchWithOfflineSupport, 
-    performOfflineAction,
-    isOnline
+    isOnline, 
+    saveDataSources, 
+    getDataSources, 
+    queueOfflineAction, 
+    syncNow 
   } = useOffline();
   
-  // Fetch data sources with offline support
+  /**
+   * Fetch data sources from API or local storage
+   */
   const fetchDataSources = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     
     try {
-      const result = await fetchWithOfflineSupport('/api/data-sources', {}, 'dataSources');
+      let fetchedSources = [];
       
-      if (result && result.data) {
-        setDataSources(result.data);
+      if (isOnline) {
+        // Fetch from API based on filters
+        let endpoint = '/api/data-sources';
+        
+        if (type) {
+          endpoint = `/api/data-sources/type/${type}`;
+        }
+        
+        const response = await fetch(endpoint);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        fetchedSources = await response.json();
+        
+        // Update local storage
+        await saveDataSources(fetchedSources);
+      } else {
+        // Fetch from local storage
+        const storedSources = await getDataSources();
+        
+        if (!storedSources) {
+          throw new Error('No data sources available offline');
+        }
+        
+        // Apply filters client-side
+        fetchedSources = storedSources.filter(source => {
+          // Apply type filter
+          if (type && source.type !== type) {
+            return false;
+          }
+          
+          return true;
+        });
       }
+      
+      setDataSources(fetchedSources);
+      setLastFetched(new Date());
     } catch (error) {
-      console.error('Failed to fetch data sources:', error);
-      Alert.alert(
-        'Error',
-        'Failed to load data sources. Please try again later.',
-        [{ text: 'OK' }]
-      );
+      console.error('Error fetching data sources:', error);
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchWithOfflineSupport]);
+  }, [type, isOnline]);
   
-  // Initial fetch
+  // Fetch data sources on mount and when filters change
   useEffect(() => {
     fetchDataSources();
   }, [fetchDataSources]);
   
-  // Apply filters when data sources or filters change
-  useEffect(() => {
-    let filtered = [...dataSources];
-    
-    // Apply type filter
-    if (filters.type) {
-      filtered = filtered.filter(source => source.sourceType === filters.type);
-    }
-    
-    // Apply status filter
-    if (filters.status) {
-      filtered = filtered.filter(source => source.status === filters.status);
-    }
-    
-    // Apply search filter
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(source =>
-        source.name.toLowerCase().includes(query)
-      );
-    }
-    
-    // Sort by freshness (most recent first)
-    filtered.sort((a, b) => {
-      // Sort by connection status first (connected sources first)
-      if (a.status === 'connected' && b.status !== 'connected') return -1;
-      if (a.status !== 'connected' && b.status === 'connected') return 1;
-      
-      // Then by data freshness
-      const aFreshness = a.dataFreshness || 0;
-      const bFreshness = b.dataFreshness || 0;
-      return bFreshness - aFreshness;
-    });
-    
-    setFilteredSources(filtered);
-  }, [dataSources, filters]);
-  
-  // Update filters
-  const updateFilters = useCallback((newFilters) => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      ...newFilters
-    }));
-  }, []);
-  
-  // Reset filters
-  const resetFilters = useCallback(() => {
-    setFilters({
-      type: null,
-      status: null,
-      searchQuery: '',
-    });
-  }, []);
-  
-  // Get source types and statuses from data sources
-  const getMetadata = useCallback(() => {
-    const types = new Set();
-    const statuses = new Set();
-    
-    dataSources.forEach(source => {
-      if (source.sourceType) types.add(source.sourceType);
-      if (source.status) statuses.add(source.status);
-    });
-    
-    return {
-      types: [...types],
-      statuses: [...statuses]
-    };
-  }, [dataSources]);
-  
-  // Add a new data source
+  /**
+   * Add a new data source
+   * @param {Object} sourceData - Data source details
+   * @returns {Promise<Object|null>} - Created data source or null if failed
+   */
   const addDataSource = useCallback(async (sourceData) => {
     try {
-      // Perform the action with offline support
-      const result = await performOfflineAction(
-        'add',
-        'dataSource',
-        sourceData
-      );
-      
-      if (result.success) {
-        // Refresh data sources list
-        await fetchDataSources();
+      if (isOnline) {
+        // Send to API
+        const response = await fetch('/api/data-sources', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(sourceData),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        const newSource = await response.json();
+        
+        // Update state
+        setDataSources(prev => [...prev, newSource]);
+        
+        // Update local storage
+        const storedSources = await getDataSources();
+        if (storedSources) {
+          await saveDataSources([...storedSources, newSource]);
+        }
+        
+        return newSource;
       } else {
-        Alert.alert(
-          'Error',
-          'Failed to add data source. Please try again later.',
-          [{ text: 'OK' }]
-        );
-      }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Failed to add data source:', error);
-      
-      Alert.alert(
-        'Error',
-        'Failed to add data source. Please try again later.',
-        [{ text: 'OK' }]
-      );
-      
-      return false;
-    }
-  }, [performOfflineAction, fetchDataSources]);
-  
-  // Update a data source
-  const updateDataSource = useCallback(async (sourceId, sourceData) => {
-    try {
-      // Optimistic update
-      setDataSources(prev => prev.map(source => 
-        source.id === sourceId 
-          ? { ...source, ...sourceData } 
-          : source
-      ));
-      
-      // Perform the action with offline support
-      const result = await performOfflineAction(
-        'update',
-        'dataSource',
-        { id: sourceId, ...sourceData }
-      );
-      
-      if (!result.success) {
-        // Refresh to get accurate data if update failed
-        await fetchDataSources();
+        // Generate temporary ID for optimistic UI
+        const tempId = `temp-${Date.now()}`;
+        const tempSource = {
+          ...sourceData,
+          id: tempId,
+          temporaryId: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
         
-        Alert.alert(
-          'Error',
-          'Failed to update data source. Please try again later.',
-          [{ text: 'OK' }]
-        );
+        // Queue offline action
+        await queueOfflineAction({
+          type: 'ADD_DATA_SOURCE',
+          data: sourceData,
+        });
+        
+        // Update state
+        setDataSources(prev => [...prev, tempSource]);
+        
+        // Update local storage
+        const storedSources = await getDataSources();
+        if (storedSources) {
+          await saveDataSources([...storedSources, tempSource]);
+        }
+        
+        return tempSource;
       }
-      
-      return result.success;
     } catch (error) {
-      console.error('Failed to update data source:', error);
+      console.error('Error adding data source:', error);
+      setError(error.message);
+      return null;
+    }
+  }, [isOnline]);
+  
+  /**
+   * Update an existing data source
+   * @param {number} id - Data source ID
+   * @param {Object} sourceData - Updated data source details
+   * @returns {Promise<Object|null>} - Updated data source or null if failed
+   */
+  const updateDataSource = useCallback(async (id, sourceData) => {
+    try {
+      // Optimistically update UI
+      const updatedSource = {
+        ...sourceData,
+        id,
+        updatedAt: new Date().toISOString(),
+      };
       
-      // Refresh to get accurate data
+      setDataSources(prev => 
+        prev.map(source => 
+          source.id === id 
+            ? { ...source, ...updatedSource }
+            : source
+        )
+      );
+      
+      if (isOnline) {
+        // Send to API
+        const response = await fetch(`/api/data-sources/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(sourceData),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Update state with returned data
+        setDataSources(prev => 
+          prev.map(source => 
+            source.id === id 
+              ? result 
+              : source
+          )
+        );
+        
+        // Update local storage
+        const storedSources = await getDataSources();
+        if (storedSources) {
+          await saveDataSources(
+            storedSources.map(source => 
+              source.id === id 
+                ? result 
+                : source
+            )
+          );
+        }
+        
+        return result;
+      } else {
+        // Queue offline action
+        await queueOfflineAction({
+          type: 'UPDATE_DATA_SOURCE',
+          data: { id, ...sourceData },
+        });
+        
+        // Update local storage
+        const storedSources = await getDataSources();
+        if (storedSources) {
+          await saveDataSources(
+            storedSources.map(source => 
+              source.id === id 
+                ? { ...source, ...updatedSource }
+                : source
+            )
+          );
+        }
+        
+        return updatedSource;
+      }
+    } catch (error) {
+      console.error('Error updating data source:', error);
+      
+      // Revert optimistic update
       await fetchDataSources();
       
-      Alert.alert(
-        'Error',
-        'Failed to update data source. Please try again later.',
-        [{ text: 'OK' }]
-      );
+      setError(error.message);
+      return null;
+    }
+  }, [isOnline, fetchDataSources]);
+  
+  /**
+   * Delete a data source
+   * @param {number} id - Data source ID
+   * @returns {Promise<boolean>} - Whether deletion was successful
+   */
+  const deleteDataSource = useCallback(async (id) => {
+    try {
+      // Keep copy for rollback
+      const sourceToDelete = dataSources.find(source => source.id === id);
       
+      // Optimistically update UI
+      setDataSources(prev => prev.filter(source => source.id !== id));
+      
+      if (isOnline) {
+        // Send to API
+        const response = await fetch(`/api/data-sources/${id}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        // Update local storage
+        const storedSources = await getDataSources();
+        if (storedSources) {
+          await saveDataSources(
+            storedSources.filter(source => source.id !== id)
+          );
+        }
+        
+        return true;
+      } else {
+        // Queue offline action
+        await queueOfflineAction({
+          type: 'DELETE_DATA_SOURCE',
+          data: { id },
+        });
+        
+        // Update local storage
+        const storedSources = await getDataSources();
+        if (storedSources) {
+          await saveDataSources(
+            storedSources.filter(source => source.id !== id)
+          );
+        }
+        
+        return true;
+      }
+    } catch (error) {
+      console.error('Error deleting data source:', error);
+      
+      // Revert optimistic update
+      await fetchDataSources();
+      
+      setError(error.message);
       return false;
     }
-  }, [performOfflineAction, fetchDataSources]);
+  }, [isOnline, dataSources, fetchDataSources]);
   
-  // Remove a data source
-  const removeDataSource = useCallback(async (sourceId) => {
+  /**
+   * Refresh a data source
+   * @param {number} id - Data source ID
+   * @returns {Promise<Object|null>} - Refreshed data source or null if failed
+   */
+  const refreshDataSource = useCallback(async (id) => {
     try {
-      // Optimistic update
-      setDataSources(prev => prev.filter(source => source.id !== sourceId));
+      if (!isOnline) {
+        throw new Error('Cannot refresh data source while offline');
+      }
       
-      // Perform the action with offline support
-      const result = await performOfflineAction(
-        'delete',
-        'dataSource',
-        { id: sourceId }
+      // Send to API
+      const response = await fetch(`/api/data-sources/${id}/refresh`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const refreshedSource = await response.json();
+      
+      // Update state
+      setDataSources(prev => 
+        prev.map(source => 
+          source.id === id 
+            ? refreshedSource 
+            : source
+        )
       );
       
-      if (!result.success) {
-        // Refresh to get accurate data if remove failed
-        await fetchDataSources();
-        
-        Alert.alert(
-          'Error',
-          'Failed to remove data source. Please try again later.',
-          [{ text: 'OK' }]
+      // Update local storage
+      const storedSources = await getDataSources();
+      if (storedSources) {
+        await saveDataSources(
+          storedSources.map(source => 
+            source.id === id 
+              ? refreshedSource 
+              : source
+          )
         );
       }
       
-      return result.success;
+      return refreshedSource;
     } catch (error) {
-      console.error('Failed to remove data source:', error);
+      console.error('Error refreshing data source:', error);
+      setError(error.message);
+      return null;
+    }
+  }, [isOnline]);
+  
+  /**
+   * Set sync schedule for a data source
+   * @param {number} id - Data source ID
+   * @param {string} frequency - Sync frequency (hourly, daily, weekly, monthly)
+   * @returns {Promise<Object|null>} - Updated data source or null if failed
+   */
+  const setSourceSyncSchedule = useCallback(async (id, frequency) => {
+    try {
+      if (!isOnline) {
+        throw new Error('Cannot set sync schedule while offline');
+      }
       
-      // Refresh to get accurate data
-      await fetchDataSources();
+      // Send to API
+      const response = await fetch(`/api/data-sources/${id}/schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ frequency }),
+      });
       
-      Alert.alert(
-        'Error',
-        'Failed to remove data source. Please try again later.',
-        [{ text: 'OK' }]
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const updatedSource = await response.json();
+      
+      // Update state
+      setDataSources(prev => 
+        prev.map(source => 
+          source.id === id 
+            ? updatedSource 
+            : source
+        )
       );
       
-      return false;
+      // Update local storage
+      const storedSources = await getDataSources();
+      if (storedSources) {
+        await saveDataSources(
+          storedSources.map(source => 
+            source.id === id 
+              ? updatedSource 
+              : source
+          )
+        );
+      }
+      
+      return updatedSource;
+    } catch (error) {
+      console.error('Error setting sync schedule:', error);
+      setError(error.message);
+      return null;
     }
-  }, [performOfflineAction, fetchDataSources]);
+  }, [isOnline]);
   
-  // Refresh a data source
-  const refreshDataSource = useCallback(async (sourceId) => {
+  /**
+   * Get a specific data source by ID
+   * @param {number} id - Data source ID
+   * @returns {Promise<Object|null>} - Data source or null if not found
+   */
+  const getDataSourceById = useCallback(async (id) => {
+    try {
+      if (isOnline) {
+        // Fetch from API
+        const response = await fetch(`/api/data-sources/${id}`);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        return await response.json();
+      } else {
+        // Check if source is already in state
+        const foundSource = dataSources.find(source => source.id === id);
+        if (foundSource) return foundSource;
+        
+        // Fetch from local storage
+        const storedSources = await getDataSources();
+        if (!storedSources) return null;
+        
+        return storedSources.find(source => source.id === id) || null;
+      }
+    } catch (error) {
+      console.error('Error getting data source by ID:', error);
+      setError(error.message);
+      return null;
+    }
+  }, [isOnline, dataSources]);
+  
+  /**
+   * Force refresh data sources
+   */
+  const refreshDataSources = useCallback(async () => {
+    // If we're offline, try to sync first
     if (!isOnline) {
-      Alert.alert(
-        'Offline',
-        'Refreshing data sources requires an internet connection.',
-        [{ text: 'OK' }]
-      );
-      return false;
+      await syncNow();
     }
     
-    try {
-      // Update source status to show refreshing
-      setDataSources(prev => prev.map(source => 
-        source.id === sourceId 
-          ? { ...source, status: 'refreshing' } 
-          : source
-      ));
-      
-      // Perform the action with offline support
-      const result = await performOfflineAction(
-        'refresh',
-        'dataSource',
-        { id: sourceId }
-      );
-      
-      // Refresh the list regardless of result
-      await fetchDataSources();
-      
-      if (!result.success) {
-        Alert.alert(
-          'Error',
-          'Failed to refresh data source. Please try again later.',
-          [{ text: 'OK' }]
-        );
-      }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Failed to refresh data source:', error);
-      
-      // Refresh to get accurate data
-      await fetchDataSources();
-      
-      Alert.alert(
-        'Error',
-        'Failed to refresh data source. Please try again later.',
-        [{ text: 'OK' }]
-      );
-      
-      return false;
-    }
-  }, [performOfflineAction, fetchDataSources, isOnline]);
-  
-  // Schedule data source sync
-  const scheduleDataSourceSync = useCallback(async (sourceId, frequency) => {
-    try {
-      // Optimistic update
-      setDataSources(prev => prev.map(source => 
-        source.id === sourceId 
-          ? { ...source, syncFrequency: frequency } 
-          : source
-      ));
-      
-      // Perform the action with offline support
-      const result = await performOfflineAction(
-        'schedule',
-        'dataSource',
-        { id: sourceId, frequency }
-      );
-      
-      if (!result.success) {
-        // Refresh to get accurate data if update failed
-        await fetchDataSources();
-        
-        Alert.alert(
-          'Error',
-          'Failed to schedule data source sync. Please try again later.',
-          [{ text: 'OK' }]
-        );
-      }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Failed to schedule data source sync:', error);
-      
-      // Refresh to get accurate data
-      await fetchDataSources();
-      
-      Alert.alert(
-        'Error',
-        'Failed to schedule data source sync. Please try again later.',
-        [{ text: 'OK' }]
-      );
-      
-      return false;
-    }
-  }, [performOfflineAction, fetchDataSources]);
-  
-  // Get freshness label for a data source
-  const getFreshnessLabel = useCallback((dataSource) => {
-    if (!dataSource.lastSynced) {
-      return 'Never synced';
-    }
-    
-    const freshness = dataSource.dataFreshness || 0;
-    
-    if (freshness > 80) return 'Up to date';
-    if (freshness > 50) return 'Recent';
-    if (freshness > 20) return 'Needs refresh';
-    return 'Outdated';
-  }, []);
+    await fetchDataSources();
+  }, [isOnline, fetchDataSources, syncNow]);
   
   return {
-    dataSources: filteredSources,
-    allDataSources: dataSources,
+    dataSources,
     isLoading,
-    filters,
-    updateFilters,
-    resetFilters,
-    refreshDataSources: fetchDataSources,
-    getMetadata,
+    error,
+    lastFetched,
+    refreshDataSources,
     addDataSource,
     updateDataSource,
-    removeDataSource,
+    deleteDataSource,
     refreshDataSource,
-    scheduleDataSourceSync,
-    getFreshnessLabel
+    setSourceSyncSchedule,
+    getDataSourceById,
   };
-};
-
-export default useDataSources;
+}

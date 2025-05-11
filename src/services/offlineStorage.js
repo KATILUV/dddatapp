@@ -1,156 +1,300 @@
 /**
- * Offline storage service for the Solstice app
- * Handles caching of insights, data sources, and user preferences for offline access
+ * Offline Storage Service
+ * Manages local data storage for offline mode
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 
-// Cache keys
-const CACHE_KEYS = {
-  INSIGHTS: 'solstice_cached_insights',
-  DATA_SOURCES: 'solstice_cached_data_sources',
-  USER_PREFERENCES: 'solstice_cached_user_preferences',
-  LAST_SYNC: 'solstice_last_sync_timestamp',
-  SYNC_QUEUE: 'solstice_sync_queue'
-};
+// Storage keys
+const USER_DATA_KEY = 'solstice_user_data';
+const USER_PREFS_KEY = 'solstice_user_preferences';
+const DATA_SOURCES_KEY = 'solstice_data_sources';
+const INSIGHTS_KEY = 'solstice_insights';
+const CACHE_MANIFEST_KEY = 'solstice_cache_manifest';
 
-// Max cache age in milliseconds (default: 7 days)
-const MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000;
+// Cache directory
+const CACHE_DIR = `${FileSystem.cacheDirectory}solstice_cache/`;
 
 /**
- * Save insights to offline storage
- * @param {Array} insights - Array of insight objects to cache
- * @returns {Promise<boolean>} - Success status
+ * Ensure cache directory exists
  */
-export async function cacheInsights(insights) {
+async function ensureCacheDir() {
+  if (Platform.OS === 'web') return;
+  
+  const dirInfo = await FileSystem.getInfoAsync(CACHE_DIR);
+  if (!dirInfo.exists) {
+    await FileSystem.makeDirectoryAsync(CACHE_DIR, { intermediates: true });
+  }
+}
+
+/**
+ * Save user data to local storage
+ * @param {Object} userData - User data to save
+ * @returns {Promise<boolean>} - Whether operation was successful
+ */
+export async function saveUserData(userData) {
   try {
-    await AsyncStorage.setItem(CACHE_KEYS.INSIGHTS, JSON.stringify(insights));
-    await updateLastSyncTimestamp();
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
     return true;
   } catch (error) {
-    console.error('Failed to cache insights:', error);
+    console.error('Failed to save user data:', error);
     return false;
   }
 }
 
 /**
- * Retrieve cached insights from offline storage
- * @returns {Promise<Array>} - Array of cached insight objects
+ * Get user data from local storage
+ * @returns {Promise<Object|null>} - User data or null if not found
  */
-export async function getCachedInsights() {
+export async function getUserData() {
   try {
-    const cachedData = await AsyncStorage.getItem(CACHE_KEYS.INSIGHTS);
-    return cachedData ? JSON.parse(cachedData) : [];
+    const dataString = await AsyncStorage.getItem(USER_DATA_KEY);
+    return dataString ? JSON.parse(dataString) : null;
   } catch (error) {
-    console.error('Failed to retrieve cached insights:', error);
-    return [];
-  }
-}
-
-/**
- * Save data sources to offline storage
- * @param {Array} dataSources - Array of data source objects to cache
- * @returns {Promise<boolean>} - Success status
- */
-export async function cacheDataSources(dataSources) {
-  try {
-    await AsyncStorage.setItem(CACHE_KEYS.DATA_SOURCES, JSON.stringify(dataSources));
-    await updateLastSyncTimestamp();
-    return true;
-  } catch (error) {
-    console.error('Failed to cache data sources:', error);
-    return false;
-  }
-}
-
-/**
- * Retrieve cached data sources from offline storage
- * @returns {Promise<Array>} - Array of cached data source objects
- */
-export async function getCachedDataSources() {
-  try {
-    const cachedData = await AsyncStorage.getItem(CACHE_KEYS.DATA_SOURCES);
-    return cachedData ? JSON.parse(cachedData) : [];
-  } catch (error) {
-    console.error('Failed to retrieve cached data sources:', error);
-    return [];
-  }
-}
-
-/**
- * Save user preferences to offline storage
- * @param {Object} preferences - User preferences object to cache
- * @returns {Promise<boolean>} - Success status
- */
-export async function cacheUserPreferences(preferences) {
-  try {
-    await AsyncStorage.setItem(CACHE_KEYS.USER_PREFERENCES, JSON.stringify(preferences));
-    return true;
-  } catch (error) {
-    console.error('Failed to cache user preferences:', error);
-    return false;
-  }
-}
-
-/**
- * Retrieve cached user preferences from offline storage
- * @returns {Promise<Object|null>} - Cached user preferences object
- */
-export async function getCachedUserPreferences() {
-  try {
-    const cachedData = await AsyncStorage.getItem(CACHE_KEYS.USER_PREFERENCES);
-    return cachedData ? JSON.parse(cachedData) : null;
-  } catch (error) {
-    console.error('Failed to retrieve cached user preferences:', error);
+    console.error('Failed to get user data:', error);
     return null;
   }
 }
 
 /**
- * Update the last sync timestamp
- * @returns {Promise<void>}
+ * Save user preferences to local storage
+ * @param {Object} preferences - User preferences to save
+ * @returns {Promise<boolean>} - Whether operation was successful
  */
-export async function updateLastSyncTimestamp() {
+export async function saveUserPreferences(preferences) {
   try {
-    await AsyncStorage.setItem(CACHE_KEYS.LAST_SYNC, JSON.stringify(Date.now()));
-  } catch (error) {
-    console.error('Failed to update last sync timestamp:', error);
-  }
-}
-
-/**
- * Check if the cache is stale (older than MAX_CACHE_AGE)
- * @returns {Promise<boolean>} - True if cache is stale
- */
-export async function isCacheStale() {
-  try {
-    const lastSyncString = await AsyncStorage.getItem(CACHE_KEYS.LAST_SYNC);
-    if (!lastSyncString) return true;
-    
-    const lastSync = JSON.parse(lastSyncString);
-    const now = Date.now();
-    
-    return (now - lastSync) > MAX_CACHE_AGE;
-  } catch (error) {
-    console.error('Failed to check cache staleness:', error);
+    await AsyncStorage.setItem(USER_PREFS_KEY, JSON.stringify(preferences));
     return true;
+  } catch (error) {
+    console.error('Failed to save user preferences:', error);
+    return false;
   }
 }
 
 /**
- * Calculate the total cache size
+ * Get user preferences from local storage
+ * @returns {Promise<Object|null>} - User preferences or null if not found
+ */
+export async function getUserPreferences() {
+  try {
+    const prefsString = await AsyncStorage.getItem(USER_PREFS_KEY);
+    return prefsString ? JSON.parse(prefsString) : null;
+  } catch (error) {
+    console.error('Failed to get user preferences:', error);
+    return null;
+  }
+}
+
+/**
+ * Save data sources to local storage
+ * @param {Array} dataSources - Data sources to save
+ * @returns {Promise<boolean>} - Whether operation was successful
+ */
+export async function saveDataSources(dataSources) {
+  try {
+    await AsyncStorage.setItem(DATA_SOURCES_KEY, JSON.stringify(dataSources));
+    return true;
+  } catch (error) {
+    console.error('Failed to save data sources:', error);
+    return false;
+  }
+}
+
+/**
+ * Get data sources from local storage
+ * @returns {Promise<Array|null>} - Data sources or null if not found
+ */
+export async function getDataSources() {
+  try {
+    const sourcesString = await AsyncStorage.getItem(DATA_SOURCES_KEY);
+    return sourcesString ? JSON.parse(sourcesString) : null;
+  } catch (error) {
+    console.error('Failed to get data sources:', error);
+    return null;
+  }
+}
+
+/**
+ * Save insights to local storage
+ * @param {Array} insights - Insights to save
+ * @returns {Promise<boolean>} - Whether operation was successful
+ */
+export async function saveInsights(insights) {
+  try {
+    await AsyncStorage.setItem(INSIGHTS_KEY, JSON.stringify(insights));
+    return true;
+  } catch (error) {
+    console.error('Failed to save insights:', error);
+    return false;
+  }
+}
+
+/**
+ * Get insights from local storage
+ * @returns {Promise<Array|null>} - Insights or null if not found
+ */
+export async function getInsights() {
+  try {
+    const insightsString = await AsyncStorage.getItem(INSIGHTS_KEY);
+    return insightsString ? JSON.parse(insightsString) : null;
+  } catch (error) {
+    console.error('Failed to get insights:', error);
+    return null;
+  }
+}
+
+/**
+ * Save file to cache
+ * @param {string} fileUri - URI of file to save
+ * @param {string} fileId - Unique ID for the file
+ * @returns {Promise<string|null>} - Local URI of cached file or null if failed
+ */
+export async function cacheFile(fileUri, fileId) {
+  if (Platform.OS === 'web') return fileUri;
+  
+  try {
+    await ensureCacheDir();
+    
+    // Get file extension
+    const extension = fileUri.split('.').pop() || 'dat';
+    const localFilePath = `${CACHE_DIR}${fileId}.${extension}`;
+    
+    // Download file
+    const downloadResult = await FileSystem.downloadAsync(
+      fileUri,
+      localFilePath
+    );
+    
+    if (downloadResult.status === 200) {
+      // Update cache manifest
+      await addToManifest(fileId, localFilePath, fileUri);
+      return localFilePath;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Failed to cache file:', error);
+    return null;
+  }
+}
+
+/**
+ * Get cached file URI
+ * @param {string} fileId - ID of file to retrieve
+ * @returns {Promise<string|null>} - Local URI of cached file or null if not found
+ */
+export async function getCachedFile(fileId) {
+  if (Platform.OS === 'web') return null;
+  
+  try {
+    // Get manifest
+    const manifest = await getCacheManifest();
+    const fileEntry = manifest[fileId];
+    
+    if (!fileEntry) return null;
+    
+    // Check if file exists
+    const fileInfo = await FileSystem.getInfoAsync(fileEntry.localPath);
+    if (fileInfo.exists) {
+      return fileEntry.localPath;
+    }
+    
+    // If file doesn't exist, try to re-download
+    return await cacheFile(fileEntry.originalUri, fileId);
+  } catch (error) {
+    console.error('Failed to get cached file:', error);
+    return null;
+  }
+}
+
+/**
+ * Add file to cache manifest
+ * @param {string} fileId - ID of the file
+ * @param {string} localPath - Local path of cached file
+ * @param {string} originalUri - Original URI of the file
+ * @returns {Promise<boolean>} - Whether operation was successful
+ */
+async function addToManifest(fileId, localPath, originalUri) {
+  try {
+    const manifest = await getCacheManifest();
+    
+    manifest[fileId] = {
+      localPath,
+      originalUri,
+      timestamp: Date.now()
+    };
+    
+    await AsyncStorage.setItem(CACHE_MANIFEST_KEY, JSON.stringify(manifest));
+    return true;
+  } catch (error) {
+    console.error('Failed to update cache manifest:', error);
+    return false;
+  }
+}
+
+/**
+ * Get cache manifest
+ * @returns {Promise<Object>} - Cache manifest
+ */
+async function getCacheManifest() {
+  try {
+    const manifestString = await AsyncStorage.getItem(CACHE_MANIFEST_KEY);
+    return manifestString ? JSON.parse(manifestString) : {};
+  } catch (error) {
+    console.error('Failed to get cache manifest:', error);
+    return {};
+  }
+}
+
+/**
+ * Clear all cached files
+ * @returns {Promise<boolean>} - Whether operation was successful
+ */
+export async function clearCache() {
+  try {
+    // Clear manifest
+    await AsyncStorage.removeItem(CACHE_MANIFEST_KEY);
+    
+    // Delete cache directory
+    if (Platform.OS !== 'web') {
+      const dirInfo = await FileSystem.getInfoAsync(CACHE_DIR);
+      if (dirInfo.exists) {
+        await FileSystem.deleteAsync(CACHE_DIR, { idempotent: true });
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to clear cache:', error);
+    return false;
+  }
+}
+
+/**
+ * Calculate size of cache
  * @returns {Promise<number>} - Size in bytes
  */
 export async function getCacheSize() {
+  if (Platform.OS === 'web') return 0;
+  
   try {
-    let totalSize = 0;
-    const keys = Object.values(CACHE_KEYS);
+    const dirInfo = await FileSystem.getInfoAsync(CACHE_DIR);
+    if (!dirInfo.exists) return 0;
     
-    for (const key of keys) {
-      const data = await AsyncStorage.getItem(key);
-      if (data) {
-        totalSize += data.length * 2; // Approximate size in bytes (UTF-16 characters)
+    // On some platforms, we can get size directly
+    if (dirInfo.size !== undefined) {
+      return dirInfo.size;
+    }
+    
+    // Otherwise, get manifest and sum up sizes
+    const manifest = await getCacheManifest();
+    
+    let totalSize = 0;
+    for (const fileId in manifest) {
+      const fileInfo = await FileSystem.getInfoAsync(manifest[fileId].localPath);
+      if (fileInfo.exists && fileInfo.size) {
+        totalSize += fileInfo.size;
       }
     }
     
@@ -162,117 +306,27 @@ export async function getCacheSize() {
 }
 
 /**
- * Clear all cached data
- * @returns {Promise<boolean>} - Success status
+ * Clear all offline data
+ * @returns {Promise<boolean>} - Whether operation was successful
  */
-export async function clearCache() {
+export async function clearOfflineData() {
   try {
-    const keys = Object.values(CACHE_KEYS);
-    await AsyncStorage.multiRemove(keys);
+    // Clear cache files
+    await clearCache();
+    
+    // Clear stored data
+    const keys = [
+      USER_DATA_KEY,
+      USER_PREFS_KEY,
+      DATA_SOURCES_KEY,
+      INSIGHTS_KEY
+    ];
+    
+    await Promise.all(keys.map(key => AsyncStorage.removeItem(key)));
+    
     return true;
   } catch (error) {
-    console.error('Failed to clear cache:', error);
+    console.error('Failed to clear offline data:', error);
     return false;
-  }
-}
-
-/**
- * Queue an action to be performed when back online
- * @param {string} action - Action type ('add', 'update', 'delete')
- * @param {string} resourceType - Resource type ('insight', 'dataSource', 'preference')
- * @param {Object} data - Data to be synced
- * @returns {Promise<boolean>} - Success status
- */
-export async function queueOfflineAction(action, resourceType, data) {
-  try {
-    // Get current queue
-    const queueString = await AsyncStorage.getItem(CACHE_KEYS.SYNC_QUEUE);
-    const queue = queueString ? JSON.parse(queueString) : [];
-    
-    // Add new action to queue
-    queue.push({
-      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      action,
-      resourceType,
-      data,
-      timestamp: Date.now()
-    });
-    
-    // Save updated queue
-    await AsyncStorage.setItem(CACHE_KEYS.SYNC_QUEUE, JSON.stringify(queue));
-    return true;
-  } catch (error) {
-    console.error('Failed to queue offline action:', error);
-    return false;
-  }
-}
-
-/**
- * Get all pending offline actions
- * @returns {Promise<Array>} - Array of queued actions
- */
-export async function getPendingOfflineActions() {
-  try {
-    const queueString = await AsyncStorage.getItem(CACHE_KEYS.SYNC_QUEUE);
-    return queueString ? JSON.parse(queueString) : [];
-  } catch (error) {
-    console.error('Failed to retrieve offline action queue:', error);
-    return [];
-  }
-}
-
-/**
- * Remove an action from the sync queue
- * @param {string} actionId - ID of the action to remove
- * @returns {Promise<boolean>} - Success status
- */
-export async function removeFromSyncQueue(actionId) {
-  try {
-    const queueString = await AsyncStorage.getItem(CACHE_KEYS.SYNC_QUEUE);
-    if (!queueString) return true;
-    
-    const queue = JSON.parse(queueString);
-    const updatedQueue = queue.filter(action => action.id !== actionId);
-    
-    await AsyncStorage.setItem(CACHE_KEYS.SYNC_QUEUE, JSON.stringify(updatedQueue));
-    return true;
-  } catch (error) {
-    console.error('Failed to remove action from sync queue:', error);
-    return false;
-  }
-}
-
-/**
- * Cache a file for offline access (images, etc.)
- * @param {string} uri - Remote URI of the file
- * @param {string} filename - Name to save the file as
- * @returns {Promise<string|null>} - Local URI of the cached file
- */
-export async function cacheFile(uri, filename) {
-  // Skip if not on a device or web
-  if (Platform.OS === 'web') {
-    return uri;
-  }
-  
-  try {
-    const cacheDir = `${FileSystem.cacheDirectory}solstice/`;
-    const fileUri = `${cacheDir}${filename}`;
-    
-    // Create cache directory if it doesn't exist
-    const dirInfo = await FileSystem.getInfoAsync(cacheDir);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
-    }
-    
-    // Download and cache the file
-    const downloadResult = await FileSystem.downloadAsync(uri, fileUri);
-    
-    if (downloadResult.status === 200) {
-      return fileUri;
-    }
-    return null;
-  } catch (error) {
-    console.error('Failed to cache file:', error);
-    return null;
   }
 }
