@@ -12,8 +12,10 @@ import theme from './src/theme';
 import AppNavigator from './src/navigation/AppNavigator';
 import GradientBackground from './src/components/GradientBackground';
 import AnimatedOrb from './src/components/AnimatedOrb';
+import OfflineIndicator from './src/components/OfflineIndicator';
 import { getData, storeData } from './src/utils/storage';
 import { AuthProvider } from './src/hooks/useAuth';
+import { OfflineProvider } from './src/contexts/OfflineContext';
 
 export default function App() {
   const [isFirstLaunch, setIsFirstLaunch] = useState(null);
