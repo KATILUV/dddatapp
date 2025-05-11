@@ -1,144 +1,129 @@
 /**
- * Offline status indicator component
- * Shows a banner when the app is offline and provides sync controls
+ * Offline Indicator Component
+ * Displays a banner when the app is offline
  */
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { BlurView } from 'expo-blur';
+import React, { useEffect, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Animated, 
+  Easing,
+  TouchableOpacity
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useOffline } from '../../contexts/OfflineContext';
+import theme from '../../theme';
 
 const OfflineIndicator = () => {
-  const {
-    isOnline,
-    isSyncing,
-    pendingActions,
-    connectionType,
-    syncNow
-  } = useOffline();
+  const { isOnline, pendingActions, lastSyncTime } = useOffline();
   
-  // Animation for showing/hiding the indicator
-  const [animation] = useState(new Animated.Value(0));
-  const [showFullDetails, setShowFullDetails] = useState(false);
+  // Animation values
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   
-  // Animate when connection status changes
+  // Animate on network status change
   useEffect(() => {
-    Animated.timing(animation, {
-      toValue: isOnline ? 0 : 1,
-      duration: 300,
-      useNativeDriver: true
-    }).start();
+    if (!isOnline) {
+      // Slide in
+      Animated.timing(slideAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true,
+      }).start();
+      
+      // Start pulse animation
+      startPulseAnimation();
+    } else {
+      // Slide out
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+      
+      // Stop pulse animation
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
   }, [isOnline]);
   
-  // Handle manual sync
-  const handleSync = () => {
-    if (!isSyncing) {
-      syncNow();
-    }
+  // Pulse animation for the icon
+  const startPulseAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   };
   
-  // Toggle details visibility
-  const toggleDetails = () => {
-    setShowFullDetails(!showFullDetails);
-  };
+  // Translation based on animation value
+  const translateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-60, 0],
+  });
   
-  // Only render if offline or syncing
-  if (isOnline && !pendingActions && !isSyncing) {
-    return null;
-  }
+  // Don't render if online
+  if (isOnline) return null;
   
-  // Label and icon for connection type
-  const getConnectionInfo = () => {
-    if (!isOnline) {
-      return {
-        label: 'Offline',
-        icon: 'cloud-offline-outline'
-      };
-    }
+  // Format last sync time
+  const getLastSyncText = () => {
+    if (!lastSyncTime) return 'Never synced';
     
-    if (isSyncing) {
-      return {
-        label: 'Syncing...',
-        icon: 'sync-outline'
-      };
-    }
+    const now = new Date();
+    const syncTime = new Date(lastSyncTime);
+    const diffMs = now - syncTime;
     
-    if (pendingActions > 0) {
-      return {
-        label: `${pendingActions} pending action${pendingActions > 1 ? 's' : ''}`,
-        icon: 'time-outline'
-      };
-    }
+    // Convert to minutes, hours, days
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    return {
-      label: 'Connected',
-      icon: 'cloud-done-outline'
-    };
-  };
-  
-  const connectionInfo = getConnectionInfo();
-  
-  // Animation styles
-  const containerStyle = {
-    transform: [
-      {
-        translateY: animation.interpolate({
-          inputRange: [0, 1],
-          outputRange: [-60, 0]
-        })
-      }
-    ]
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
   };
   
   return (
-    <Animated.View style={[styles.container, containerStyle]}>
-      <BlurView intensity={90} style={styles.blurContainer}>
-        <TouchableOpacity
-          style={styles.contentContainer}
-          onPress={toggleDetails}
-          activeOpacity={0.7}
-        >
-          <View style={styles.mainContent}>
-            <View style={styles.iconContainer}>
-              <Ionicons
-                name={connectionInfo.icon}
-                size={18}
-                color={isOnline ? '#2ecc71' : '#e74c3c'}
-              />
-            </View>
-            <Text style={styles.statusText}>{connectionInfo.label}</Text>
-          </View>
-          
-          {pendingActions > 0 && !isSyncing && isOnline && (
-            <TouchableOpacity
-              style={styles.syncButton}
-              onPress={handleSync}
-              disabled={isSyncing}
-            >
-              <Text style={styles.syncText}>Sync</Text>
-            </TouchableOpacity>
-          )}
-        </TouchableOpacity>
+    <Animated.View 
+      style={[
+        styles.container,
+        { transform: [{ translateY }] }
+      ]}
+    >
+      <View style={styles.content}>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <Ionicons 
+            name="cloud-offline" 
+            size={20} 
+            color={theme.colors.text.primary} 
+          />
+        </Animated.View>
         
-        {showFullDetails && (
-          <View style={styles.detailsContainer}>
-            <Text style={styles.detailsText}>
-              Connection: {connectionType}
-            </Text>
-            {pendingActions > 0 && (
-              <Text style={styles.detailsText}>
-                {pendingActions} action{pendingActions > 1 ? 's' : ''} waiting to sync
-              </Text>
-            )}
-            <Text style={styles.detailsText}>
-              {isOnline 
-                ? 'Your data will sync automatically'
-                : 'Changes will sync when you reconnect'
-              }
-            </Text>
-          </View>
-        )}
-      </BlurView>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>You're offline</Text>
+          <Text style={styles.subtitle}>
+            {pendingActions > 0 
+              ? `${pendingActions} action${pendingActions > 1 ? 's' : ''} pending • Last sync: ${getLastSyncText()}`
+              : `Data synced ${getLastSyncText()}`
+            }
+          </Text>
+        </View>
+      </View>
     </Animated.View>
   );
 };
@@ -149,59 +134,35 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 999
-  },
-  blurContainer: {
-    overflow: 'hidden',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    zIndex: 999,
+    backgroundColor: theme.colors.background.elevated,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.subtle,
     paddingVertical: 12,
-    paddingHorizontal: 16
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  mainContent: {
+  content: {
     flexDirection: 'row',
-    alignItems: 'center'
-  },
-  iconContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10
   },
-  statusText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600'
+  textContainer: {
+    marginLeft: 12,
+    flex: 1,
   },
-  syncButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 6
+  title: {
+    ...theme.typography.styles.body2,
+    color: theme.colors.text.primary,
+    fontWeight: '500',
   },
-  syncText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600'
+  subtitle: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.text.secondary,
   },
-  detailsContainer: {
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)'
-  },
-  detailsText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-    marginBottom: 6
-  }
 });
 
 export default OfflineIndicator;

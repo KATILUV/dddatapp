@@ -82,12 +82,15 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider theme={theme}>
         <AuthProvider>
-          <NavigationContainer>
-            <GradientBackground>
-              <StatusBar style="light" />
-              <AppNavigator isFirstLaunch={isFirstLaunch} />
-            </GradientBackground>
-          </NavigationContainer>
+          <OfflineProvider>
+            <NavigationContainer>
+              <GradientBackground>
+                <StatusBar style="light" />
+                <OfflineIndicator />
+                <AppNavigator isFirstLaunch={isFirstLaunch} />
+              </GradientBackground>
+            </NavigationContainer>
+          </OfflineProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
