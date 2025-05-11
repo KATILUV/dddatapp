@@ -83,12 +83,17 @@ export const oauthTokens = pgTable("oauth_tokens", {
 export const insights = pgTable("insights", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type: varchar("type").notNull(), // behavioral, creative, emotional
+  type: varchar("type").notNull(), // behavioral, creative, emotional, correlation, pattern, prediction
+  category: varchar("category"), // health, productivity, creativity, relationships, etc.
   title: varchar("title").notNull(),
   summary: text("summary").notNull(),
   details: jsonb("details"),
   confidence: integer("confidence"), // 0-100
   sources: jsonb("sources"), // Array of source IDs that generated this insight
+  relevanceScore: integer("relevance_score"), // 0-100
+  isStarred: boolean("is_starred").default(false),
+  isArchived: boolean("is_archived").default(false),
+  exportHistory: jsonb("export_history"), // Track when/where insights were exported
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

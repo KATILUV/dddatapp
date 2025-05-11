@@ -208,6 +208,111 @@ async function registerRoutes(app) {
       res.status(500).json({ message: "Failed to fetch insight" });
     }
   });
+  
+  // Get insights by category
+  app.get('/api/insights/category/:category', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const category = req.params.category;
+      const insights = await storage.getUserInsightsByCategory(userId, category);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching insights by category:", error);
+      res.status(500).json({ message: "Failed to fetch insights" });
+    }
+  });
+  
+  // Get insights by type
+  app.get('/api/insights/type/:type', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const type = req.params.type;
+      const insights = await storage.getUserInsightsByType(userId, type);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching insights by type:", error);
+      res.status(500).json({ message: "Failed to fetch insights" });
+    }
+  });
+  
+  // Get starred insights
+  app.get('/api/insights/starred', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const insights = await storage.getStarredInsights(userId);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching starred insights:", error);
+      res.status(500).json({ message: "Failed to fetch insights" });
+    }
+  });
+  
+  // Star/unstar an insight
+  app.post('/api/insights/:id/star', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const insightId = parseInt(req.params.id);
+      const { starred } = req.body;
+      
+      // Verify the insight exists and belongs to the user
+      const insight = await storage.getInsightById(insightId);
+      if (!insight || insight.userId !== userId) {
+        return res.status(404).json({ message: "Insight not found" });
+      }
+      
+      const updatedInsight = await storage.starInsight(insightId, !!starred);
+      res.json(updatedInsight);
+    } catch (error) {
+      console.error("Error starring/unstarring insight:", error);
+      res.status(500).json({ message: "Failed to update insight" });
+    }
+  });
+  
+  // Archive/unarchive an insight
+  app.post('/api/insights/:id/archive', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const insightId = parseInt(req.params.id);
+      const { archived } = req.body;
+      
+      // Verify the insight exists and belongs to the user
+      const insight = await storage.getInsightById(insightId);
+      if (!insight || insight.userId !== userId) {
+        return res.status(404).json({ message: "Insight not found" });
+      }
+      
+      const updatedInsight = await storage.archiveInsight(insightId, !!archived);
+      res.json(updatedInsight);
+    } catch (error) {
+      console.error("Error archiving/unarchiving insight:", error);
+      res.status(500).json({ message: "Failed to update insight" });
+    }
+  });
+  
+  // Track insight export
+  app.post('/api/insights/:id/export', isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const insightId = parseInt(req.params.id);
+      const { destination } = req.body;
+      
+      if (!destination) {
+        return res.status(400).json({ message: "Destination is required" });
+      }
+      
+      // Verify the insight exists and belongs to the user
+      const insight = await storage.getInsightById(insightId);
+      if (!insight || insight.userId !== userId) {
+        return res.status(404).json({ message: "Insight not found" });
+      }
+      
+      const updatedInsight = await storage.trackInsightExport(insightId, destination);
+      res.json(updatedInsight);
+    } catch (error) {
+      console.error("Error exporting insight:", error);
+      res.status(500).json({ message: "Failed to export insight" });
+    }
+  });
 
   // Status endpoint
   app.get('/api/status', (req: Request, res: Response) => {

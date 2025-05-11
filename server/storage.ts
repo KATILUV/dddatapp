@@ -16,7 +16,7 @@ import {
   type InsertInsight
 } from "../shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -45,9 +45,15 @@ export interface IStorage {
   
   // Insights
   getUserInsights(userId: string): Promise<Insight[]>;
+  getUserInsightsByCategory(userId: string, category: string): Promise<Insight[]>;
+  getUserInsightsByType(userId: string, type: string): Promise<Insight[]>;
+  getStarredInsights(userId: string): Promise<Insight[]>;
   getInsightById(id: number): Promise<Insight | undefined>;
   saveInsight(insight: InsertInsight): Promise<Insight>;
   updateInsight(id: number, insight: Partial<InsertInsight>): Promise<Insight>;
+  starInsight(id: number, starred: boolean): Promise<Insight>;
+  archiveInsight(id: number, archived: boolean): Promise<Insight>;
+  trackInsightExport(id: number, destination: string): Promise<Insight>;
   removeInsight(id: number): Promise<void>;
 }
 
@@ -295,7 +301,38 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(insights)
-      .where(eq(insights.userId, userId));
+      .where(eq(insights.userId, userId))
+      .where(eq(insights.isArchived, false))
+      .orderBy(desc(insights.createdAt));
+  }
+
+  async getUserInsightsByCategory(userId: string, category: string): Promise<Insight[]> {
+    return await db
+      .select()
+      .from(insights)
+      .where(eq(insights.userId, userId))
+      .where(eq(insights.category, category))
+      .where(eq(insights.isArchived, false))
+      .orderBy(desc(insights.createdAt));
+  }
+
+  async getUserInsightsByType(userId: string, type: string): Promise<Insight[]> {
+    return await db
+      .select()
+      .from(insights)
+      .where(eq(insights.userId, userId))
+      .where(eq(insights.type, type))
+      .where(eq(insights.isArchived, false))
+      .orderBy(desc(insights.createdAt));
+  }
+
+  async getStarredInsights(userId: string): Promise<Insight[]> {
+    return await db
+      .select()
+      .from(insights)
+      .where(eq(insights.userId, userId))
+      .where(eq(insights.isStarred, true))
+      .orderBy(desc(insights.createdAt));
   }
 
   async getInsightById(id: number): Promise<Insight | undefined> {
@@ -307,6 +344,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveInsight(insight: InsertInsight): Promise<Insight> {
+    // Set default category if not provided based on type
+    if (!insight.category && insight.type) {
+      switch (insight.type) {
+        case 'behavioral':
+          insight.category = 'productivity';
+          break;
+        case 'emotional':
+          insight.category = 'wellbeing';
+          break;
+        case 'creative':
+          insight.category = 'creativity';
+          break;
+        case 'correlation':
+          insight.category = 'patterns';
+          break;
+        case 'pattern':
+          insight.category = 'patterns';
+          break;
+        case 'prediction':
+          insight.category = 'future';
+          break;
+        default:
+          insight.category = 'general';
+      }
+    }
+    
     const [newInsight] = await db
       .insert(insights)
       .values(insight)
@@ -323,6 +386,74 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(insights.id, id))
       .returning();
+    return updatedInsight;
+  }
+
+  async starInsight(id: number, starred: boolean): Promise<Insight> {
+    const [updatedInsight] = await db
+      .update(insights)
+      .set({
+        isStarred: starred,
+        updatedAt: new Date(),
+      })
+      .where(eq(insights.id, id))
+      .returning();
+    return updatedInsight;
+  }
+
+  async archiveInsight(id: number, archived: boolean): Promise<Insight> {
+    const [updatedInsight] = await db
+      .update(insights)
+      .set({
+        isArchived: archived,
+        updatedAt: new Date(),
+      })
+      .where(eq(insights.id, id))
+      .returning();
+    return updatedInsight;
+  }
+
+  async trackInsightExport(id: number, destination: string): Promise<Insight> {
+    // Get the current insight first
+    const [currentInsight] = await db
+      .select()
+      .from(insights)
+      .where(eq(insights.id, id));
+    
+    if (!currentInsight) {
+      throw new Error(`Insight with ID ${id} not found`);
+    }
+    
+    // Create or update export history
+    let exportHistory = [];
+    if (currentInsight.exportHistory) {
+      if (Array.isArray(currentInsight.exportHistory)) {
+        exportHistory = [...currentInsight.exportHistory];
+      } else if (typeof currentInsight.exportHistory === 'string') {
+        try {
+          exportHistory = JSON.parse(currentInsight.exportHistory);
+        } catch (e) {
+          exportHistory = [];
+        }
+      }
+    }
+    
+    // Add new export record
+    exportHistory.push({
+      destination,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Update the insight with the new export history
+    const [updatedInsight] = await db
+      .update(insights)
+      .set({
+        exportHistory: exportHistory,
+        updatedAt: new Date(),
+      })
+      .where(eq(insights.id, id))
+      .returning();
+    
     return updatedInsight;
   }
 
