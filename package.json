@@ -30,7 +30,7 @@
     "expo-linear-gradient": "~12.1.2",
     "expo-sharing": "~11.2.2",
     "expo-status-bar": "~1.4.4",
-    "expo-updates": "^0.28.13",
+    "expo-updates": "^0.16.4",
     "express": "^4.18.2",
     "express-session": "^1.17.3",
     "http-server": "^14.1.1",
