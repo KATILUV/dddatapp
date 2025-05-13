@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Voa",
-    "slug": "voa",
+    "name": "Solstice",
+    "slug": "solstice",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,21 +11,24 @@
       "backgroundColor": "#0B0B23"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "runtimeVersion": {
+        "policy": "sdkVersion"
+      }
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.voa.app"
+      "bundleIdentifier": "com.solstice.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B0B23"
       },
-      "package": "com.voa.app"
+      "package": "com.solstice.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
